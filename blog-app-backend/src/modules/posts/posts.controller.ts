@@ -20,7 +20,7 @@ import { UpdatePostDto } from './dto/update-post.dto';
 import { PostsService } from './posts.service';
 
 @ApiTags('posts')
-@Controller({ path: 'posts', version: '1' })
+@Controller({ path: 'posts' })
 export class PostsController {
   constructor(private readonly postsService: PostsService) {}
 

@@ -20,7 +20,7 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('users')
 @ApiBearerAuth('JWT')
-@Controller({ path: 'users', version: '1' })
+@Controller({ path: 'users' })
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
