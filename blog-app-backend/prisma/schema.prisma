@@ -39,6 +39,7 @@ deletedAt DateTime? @map("deleted_at")
 refreshTokens RefreshToken[]
 resetPasswords ResetPassword[]
 posts Post[]
+comments Comment[]
 
 @@map("users")
 }
@@ -57,10 +58,28 @@ updatedAt DateTime @updatedAt @map("updated_at")
 deletedAt DateTime? @map("deleted_at")
 
 author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+comments Comment[]
 
 @@index([authorId])
 @@index([isPublished, createdAt])
 @@map("posts")
+}
+
+model Comment {
+id String @id @default(uuid())
+postId String @map("post_id")
+authorId String @map("author_id")
+content String
+createdAt DateTime @default(now()) @map("created_at")
+updatedAt DateTime @updatedAt @map("updated_at")
+deletedAt DateTime? @map("deleted_at")
+
+post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+@@index([postId, createdAt])
+@@index([authorId])
+@@map("comments")
 }
 
 model RefreshToken {
