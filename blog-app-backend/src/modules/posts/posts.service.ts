@@ -4,28 +4,34 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { Prisma, Post } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePostDto } from './dto/create-post.dto';
 import { PostsQueryDto } from './dto/posts-query.dto';
 import { UpdatePostDto } from './dto/update-post.dto';
 import { PostEntity } from './entities/post.entity';
 
+type PostSortableField = 'createdAt' | 'updatedAt' | 'publishedAt' | 'title';
+
 @Injectable()
 export class PostsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private toEntity(post: {
-    id: string;
-    authorId: string;
-    title: string;
-    slug: string;
-    content: string;
-    excerpt: string | null;
-    isPublished: boolean;
-    publishedAt: Date | null;
-    createdAt: Date;
-    updatedAt: Date;
-  }): PostEntity {
+  private toEntity(
+    post: Pick<
+      Post,
+      | 'id'
+      | 'authorId'
+      | 'title'
+      | 'slug'
+      | 'content'
+      | 'excerpt'
+      | 'isPublished'
+      | 'publishedAt'
+      | 'createdAt'
+      | 'updatedAt'
+    >,
+  ): PostEntity {
     return {
       id: post.id,
       authorId: post.authorId,
@@ -51,16 +57,73 @@ export class PostsService {
   }
 
   private async buildUniqueSlug(title: string, customSlug?: string) {
-    const base = this.slugify(customSlug && customSlug.length > 0 ? customSlug : title);
+    const base = this.slugify(
+      customSlug && customSlug.length > 0 ? customSlug : title,
+    );
     if (!base) {
       throw new ConflictException('Unable to generate a valid slug from title');
     }
 
-    const existing = await this.prisma.post.findUnique({ where: { slug: base } });
+    const existing = await this.prisma.post.findUnique({
+      where: { slug: base },
+    });
     if (!existing) return base;
 
     const suffix = Math.random().toString(36).slice(2, 8);
     return `${base}-${suffix}`;
+  }
+
+  private buildSortOrder(
+    query: PostsQueryDto,
+  ): Prisma.PostOrderByWithRelationInput {
+    const sortBy = query.sortBy ?? 'createdAt';
+    const sortOrder = query.sortOrder ?? 'desc';
+
+    return {
+      [sortBy]: sortOrder,
+    } as Prisma.PostOrderByWithRelationInput;
+  }
+
+  private buildSearchFilter(search?: string): Prisma.PostWhereInput {
+    if (!search?.trim()) {
+      return {};
+    }
+
+    const term = search.trim();
+    return {
+      OR: [
+        { title: { contains: term } },
+        { slug: { contains: term } },
+        { excerpt: { contains: term } },
+        { content: { contains: term } },
+      ],
+    };
+  }
+
+  private buildListWhere(
+    query: PostsQueryDto,
+    options: { publishedOnly: boolean; authorId?: string },
+  ): Prisma.PostWhereInput {
+    const filters: Prisma.PostWhereInput[] = [{ deletedAt: null }];
+
+    if (options.publishedOnly || query.status === 'published') {
+      filters.push({ isPublished: true });
+    } else if (query.status === 'draft') {
+      filters.push({ isPublished: false });
+    }
+
+    if (options.authorId) {
+      filters.push({ authorId: options.authorId });
+    } else if (query.authorId) {
+      filters.push({ authorId: query.authorId });
+    }
+
+    const searchFilter = this.buildSearchFilter(query.search);
+    if (Object.keys(searchFilter).length > 0) {
+      filters.push(searchFilter);
+    }
+
+    return filters.length === 1 ? filters[0] : { AND: filters };
   }
 
   async create(authorId: string, dto: CreatePostDto): Promise<PostEntity> {
@@ -82,19 +145,14 @@ export class PostsService {
   async listPublished(query: PostsQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-
-    const where = {
-      isPublished: true,
-      deletedAt: null,
-      ...(query.authorId ? { authorId: query.authorId } : {}),
-    };
+    const where = this.buildListWhere(query, { publishedOnly: true });
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.post.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: this.buildSortOrder(query),
       }),
       this.prisma.post.count({ where }),
     ]);
@@ -111,18 +169,17 @@ export class PostsService {
   async listMine(authorId: string, query: PostsQueryDto) {
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
-
-    const where = {
+    const where = this.buildListWhere(query, {
+      publishedOnly: false,
       authorId,
-      deletedAt: null,
-    };
+    });
 
     const [data, total] = await this.prisma.$transaction([
       this.prisma.post.findMany({
         where,
         skip: (page - 1) * limit,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: this.buildSortOrder(query),
       }),
       this.prisma.post.count({ where }),
     ]);
@@ -164,7 +221,11 @@ export class PostsService {
     return this.toEntity(post);
   }
 
-  async update(authorId: string, id: string, dto: UpdatePostDto): Promise<PostEntity> {
+  async update(
+    authorId: string,
+    id: string,
+    dto: UpdatePostDto,
+  ): Promise<PostEntity> {
     const existing = await this.prisma.post.findFirst({
       where: { id, deletedAt: null },
     });
