@@ -11,6 +11,7 @@ import { UserModelAction } from './actions/user.action';
 import { ResetPasswordModelAction } from './actions/reset-password.action';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PaginationDto } from './dto/pagination.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthProvider, User } from './entities/user.entity';
 import { ResetPassword } from '../auth/entities/reset-password.entity';
@@ -82,6 +83,39 @@ export class UsersService {
     if (!updated) {
       throw new InternalServerErrorException('Failed to update user');
     }
+    return updated;
+  }
+
+  async updateMyProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
+    await this.findOne(userId);
+
+    const payload: Partial<User> = {};
+
+    if (dto.fullName !== undefined) payload.fullName = dto.fullName;
+    if (dto.bio !== undefined) payload.bio = dto.bio;
+    if (dto.photoUrl !== undefined) payload.photoUrl = dto.photoUrl;
+
+    if (dto.username !== undefined) {
+      const username = dto.username?.trim() || null;
+      if (username) {
+        const existing = await this.findByUsername(username);
+        if (existing && existing.id !== userId) {
+          throw new ConflictException('Username already in use');
+        }
+      }
+      payload.username = username;
+    }
+
+    const updated = await this.userModelAction.update({
+      ...NO_TRANSACTION,
+      identifierOptions: { id: userId },
+      updatePayload: payload,
+    });
+
+    if (!updated) {
+      throw new InternalServerErrorException('Failed to update profile');
+    }
+
     return updated;
   }
 

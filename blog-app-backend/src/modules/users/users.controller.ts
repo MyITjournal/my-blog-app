@@ -14,6 +14,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CreateUserDto } from './dto/create-user.dto';
 import { PaginationDto } from './dto/pagination.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -43,6 +44,15 @@ export class UsersController {
     return this.usersService.findOne(id);
   }
 
+  @Patch('me/profile')
+  @ApiOperation({ summary: 'Update current user profile' })
+  updateMyProfile(
+    @CurrentUser('sub') userId: string,
+    @Body() dto: UpdateProfileDto,
+  ) {
+    return this.usersService.updateMyProfile(userId, dto);
+  }
+
   @Patch(':id')
   @ApiOperation({ summary: 'Update a user' })
   update(@Param('id', ParseUUIDPipe) id: string, @Body() dto: UpdateUserDto) {
@@ -56,7 +66,7 @@ export class UsersController {
     return this.usersService.remove(id);
   }
 
-@ApiBearerAuth('JWT')
+  @ApiBearerAuth('JWT')
   @Post('onboarding-complete')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Mark a user onboarding complete' })
