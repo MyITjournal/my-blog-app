@@ -14,6 +14,7 @@ import { PaginationDto } from './dto/pagination.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { AuthProvider, User } from './entities/user.entity';
 import { ResetPassword } from '../auth/entities/reset-password.entity';
+import { PostsService } from '../posts/posts.service';
 
 const NO_TRANSACTION = {
   transactionOptions: { useTransaction: false as const },
@@ -26,6 +27,7 @@ export class UsersService {
   constructor(
     private readonly userModelAction: UserModelAction,
     private readonly resetPasswordAction: ResetPasswordModelAction,
+    private readonly postsService: PostsService,
   ) {}
 
   async create(dto: CreateUserDto): Promise<User> {
@@ -289,5 +291,20 @@ export class UsersService {
 
   async findByUsername(username: string): Promise<User | null> {
     return await this.userModelAction.findByUsername(username);
+  }
+
+  async getAuthorProfile(id: string): Promise<User> {
+    const user = await this.findOne(id);
+    return user;
+  }
+
+  async getAuthorPublishedPosts(id: string, pagination: PaginationDto) {
+    await this.findOne(id);
+
+    return this.postsService.listPublished({
+      page: pagination.page,
+      limit: pagination.limit,
+      authorId: id,
+    });
   }
 }

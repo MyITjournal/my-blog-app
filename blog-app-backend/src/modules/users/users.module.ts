@@ -4,8 +4,10 @@ import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 import { ResetPasswordModelAction } from './actions/reset-password.action';
 import { StaleUsersCleanupService } from './stale-users-cleanup.service';
+import { PostsModule } from '../posts/posts.module';
 
 @Module({
+  imports: [PostsModule],
   controllers: [UsersController],
   providers: [
     UserModelAction,

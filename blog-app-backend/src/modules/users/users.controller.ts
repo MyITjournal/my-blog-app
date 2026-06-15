@@ -17,6 +17,7 @@ import { PaginationDto } from './dto/pagination.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
+import { Public } from '../../common/decorators/public.decorator';
 
 @ApiTags('users')
 @ApiBearerAuth('JWT')
@@ -61,5 +62,22 @@ export class UsersController {
   @ApiOperation({ summary: 'Mark a user onboarding complete' })
   markOnboardingComplete(@CurrentUser('sub') userId: string) {
     return this.usersService.markOnboardingComplete(userId);
+  }
+
+  @Public()
+  @Get('authors/:id')
+  @ApiOperation({ summary: 'Get public author profile' })
+  getAuthorProfile(@Param('id', ParseUUIDPipe) id: string) {
+    return this.usersService.getAuthorProfile(id);
+  }
+
+  @Public()
+  @Get('authors/:id/posts')
+  @ApiOperation({ summary: "Get author's published posts" })
+  getAuthorPublishedPosts(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Query() pagination: PaginationDto,
+  ) {
+    return this.usersService.getAuthorPublishedPosts(id, pagination);
   }
 }
