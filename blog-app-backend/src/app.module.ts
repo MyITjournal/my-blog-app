@@ -7,9 +7,11 @@ import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { UsersModule } from './modules/users/users.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { PrismaModule } from './prisma/prisma.module';
 
 @Module({
   imports: [
+    PrismaModule,
     TypeOrmModule.forRoot({
       type: 'sqlite' as any,
       database: 'blog-app.db',
