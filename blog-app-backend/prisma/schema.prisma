@@ -38,8 +38,29 @@ deletedAt DateTime? @map("deleted_at")
 
 refreshTokens RefreshToken[]
 resetPasswords ResetPassword[]
+posts Post[]
 
 @@map("users")
+}
+
+model Post {
+id String @id @default(uuid())
+authorId String @map("author_id")
+title String
+slug String @unique
+content String
+excerpt String?
+isPublished Boolean @default(false) @map("is_published")
+publishedAt DateTime? @map("published_at")
+createdAt DateTime @default(now()) @map("created_at")
+updatedAt DateTime @updatedAt @map("updated_at")
+deletedAt DateTime? @map("deleted_at")
+
+author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+@@index([authorId])
+@@index([isPublished, createdAt])
+@@map("posts")
 }
 
 model RefreshToken {
