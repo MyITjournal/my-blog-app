@@ -1,21 +1,24 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { Prisma, ResetPassword as PrismaResetPassword } from '@prisma/client';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { ResetPassword } from '../../auth/entities/reset-password.entity';
 
 @Injectable()
 export class ResetPasswordModelAction {
-  constructor(
-    @InjectRepository(ResetPassword)
-    private readonly repo: Repository<ResetPassword>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
+
+  private toDomain(item: PrismaResetPassword | null): ResetPassword | null {
+    return item as unknown as ResetPassword | null;
+  }
 
   async create(options: {
     transactionOptions?: unknown;
     createPayload: Partial<ResetPassword>;
   }): Promise<ResetPassword> {
-    const entity = this.repo.create(options.createPayload);
-    return this.repo.save(entity);
+    const created = await this.prisma.resetPassword.create({
+      data: options.createPayload as Prisma.ResetPasswordUncheckedCreateInput,
+    });
+    return created as unknown as ResetPassword;
   }
 
   async update(options: {
@@ -23,41 +26,46 @@ export class ResetPasswordModelAction {
     identifierOptions: Partial<Pick<ResetPassword, 'id'>>;
     updatePayload: Partial<ResetPassword>;
   }): Promise<ResetPassword | null> {
-    await this.repo.update(
-      options.identifierOptions as FindOptionsWhere<ResetPassword>,
-      options.updatePayload,
-    );
-    return this.repo.findOne({
-      where: options.identifierOptions as FindOptionsWhere<ResetPassword>,
+    await this.prisma.resetPassword.update({
+      where: { id: options.identifierOptions.id },
+      data: options.updatePayload as Prisma.ResetPasswordUncheckedUpdateInput,
     });
+    const found = await this.prisma.resetPassword.findUnique({
+      where: { id: options.identifierOptions.id },
+    });
+    return this.toDomain(found);
   }
 
   async findBySelector(tokenSelector: string): Promise<ResetPassword | null> {
-    return this.repo
-      .createQueryBuilder('rp')
-      .where('rp.tokenSelector = :tokenSelector', { tokenSelector })
-      .getOne();
+    const found = await this.prisma.resetPassword.findFirst({
+      where: { tokenSelector },
+    });
+    return this.toDomain(found);
   }
 
   async findByValidSelector(
     tokenSelector: string,
   ): Promise<ResetPassword | null> {
-    return this.repo
-      .createQueryBuilder('rp')
-      .where('rp.tokenSelector = :tokenSelector', { tokenSelector })
-      .andWhere('rp.used = :used', { used: false })
-      .andWhere('rp.expiresAt > CURRENT_TIMESTAMP')
-      .getOne();
+    const found = await this.prisma.resetPassword.findFirst({
+      where: {
+        tokenSelector,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+    });
+    return this.toDomain(found);
   }
 
   async findByUserId(userId: string): Promise<ResetPassword | null> {
-    return this.repo
-      .createQueryBuilder('rp')
-      .where('rp.userId = :userId', { userId })
-      .andWhere('rp.used = :used', { used: false })
-      .andWhere('rp.expiresAt > CURRENT_TIMESTAMP')
-      .orderBy('rp.createdAt', 'DESC')
-      .getOne();
+    const found = await this.prisma.resetPassword.findFirst({
+      where: {
+        userId,
+        used: false,
+        expiresAt: { gt: new Date() },
+      },
+      orderBy: { createdAt: Prisma.SortOrder.desc },
+    });
+    return this.toDomain(found);
   }
 
   async markAsUsed(id: string): Promise<void> {
@@ -69,17 +77,14 @@ export class ResetPasswordModelAction {
   }
 
   async deleteByUserId(userId: string): Promise<void> {
-    await this.repo.delete({ userId });
+    await this.prisma.resetPassword.deleteMany({ where: { userId } });
   }
 
   // Invalidates ALL active tokens for a user before issuing a new one
   async invalidateAllByUserId(userId: string): Promise<void> {
-    await this.repo
-      .createQueryBuilder()
-      .update(ResetPassword)
-      .set({ used: true })
-      .where('userId = :userId', { userId })
-      .andWhere('used = :used', { used: false }) // Only touch active tokens — avoids unnecessary writes
-      .execute();
+    await this.prisma.resetPassword.updateMany({
+      where: { userId, used: false },
+      data: { used: true },
+    });
   }
 }

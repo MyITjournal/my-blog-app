@@ -1,29 +1,43 @@
 import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsWhere, Repository } from 'typeorm';
+import { Prisma, User as PrismaUser } from '@prisma/client';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { User } from '../entities/user.entity';
 
 @Injectable()
 export class UserModelAction {
-  constructor(
-    @InjectRepository(User)
-    private readonly repo: Repository<User>,
-  ) {}
+  constructor(private readonly prisma: PrismaService) {}
+
+  private toDomain(user: PrismaUser | null): User | null {
+    return user as unknown as User | null;
+  }
+
+  private whereUnique(
+    identifier: Partial<Pick<User, 'id' | 'email' | 'username'>>,
+  ): Prisma.UserWhereUniqueInput {
+    if (identifier.id) return { id: identifier.id };
+    if (identifier.email) return { email: identifier.email };
+    if (identifier.username) return { username: identifier.username };
+    throw new Error('No valid unique identifier provided for user lookup');
+  }
 
   async get(options: {
     identifierOptions: Partial<Pick<User, 'id' | 'email' | 'username'>>;
   }): Promise<User | null> {
-    return this.repo.findOne({
-      where: options.identifierOptions as FindOptionsWhere<User>,
+    const user = await this.prisma.user.findUnique({
+      where: this.whereUnique(options.identifierOptions),
     });
+    if (user?.deletedAt) return null;
+    return this.toDomain(user);
   }
 
   async create(options: {
     transactionOptions?: unknown;
     createPayload: Partial<User>;
   }): Promise<User> {
-    const entity = this.repo.create(options.createPayload);
-    return this.repo.save(entity);
+    const created = await this.prisma.user.create({
+      data: options.createPayload as Prisma.UserUncheckedCreateInput,
+    });
+    return created as unknown as User;
   }
 
   async update(options: {
@@ -31,10 +45,10 @@ export class UserModelAction {
     identifierOptions: Partial<Pick<User, 'id' | 'email' | 'username'>>;
     updatePayload: Partial<User>;
   }): Promise<User | null> {
-    await this.repo.update(
-      options.identifierOptions as FindOptionsWhere<User>,
-      options.updatePayload,
-    );
+    await this.prisma.user.update({
+      where: this.whereUnique(options.identifierOptions),
+      data: options.updatePayload as Prisma.UserUncheckedUpdateInput,
+    });
     return this.get({ identifierOptions: options.identifierOptions });
   }
 
@@ -42,7 +56,10 @@ export class UserModelAction {
     transactionOptions?: unknown;
     identifierOptions: Partial<Pick<User, 'id' | 'email' | 'username'>>;
   }): Promise<void> {
-    await this.repo.softDelete(options.identifierOptions as FindOptionsWhere<User>);
+    await this.prisma.user.update({
+      where: this.whereUnique(options.identifierOptions),
+      data: { deletedAt: new Date() },
+    });
   }
 
   async list(options: {
@@ -56,14 +73,29 @@ export class UserModelAction {
     totalPages: number;
   }> {
     const { page, limit } = options.paginationPayload;
-    const [data, total] = await this.repo.findAndCount({
-      skip: (page - 1) * limit,
-      take: limit,
-      order: options.order,
-    });
+    const where: Prisma.UserWhereInput = { deletedAt: null };
+    const orderBy: Prisma.UserOrderByWithRelationInput | undefined =
+      options.order
+        ? {
+            createdAt:
+              options.order.createdAt === 'ASC'
+                ? Prisma.SortOrder.asc
+                : Prisma.SortOrder.desc,
+          }
+        : undefined;
+
+    const [data, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy,
+      }),
+      this.prisma.user.count({ where }),
+    ]);
 
     return {
-      data,
+      data: data as unknown as User[],
       total,
       page,
       limit,
@@ -73,10 +105,6 @@ export class UserModelAction {
 
   findByEmail(email: string): Promise<User | null> {
     return this.get({ identifierOptions: { email } });
-  }
-
-  createQueryBuilder(alias: string) {
-    return this.repo.createQueryBuilder(alias);
   }
 
   async findByUsername(username: string): Promise<User | null> {

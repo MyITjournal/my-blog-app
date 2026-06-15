@@ -4,10 +4,8 @@ import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import type { StringValue } from 'ms';
 import type { Response } from 'express';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { env } from '../../../config/env';
-import { RefreshToken } from '../entities/refresh-token.entity';
 import { User, UserRole } from '../../users/entities/user.entity';
 import { JwtPayload } from '../strategies/jwt.strategy';
 import { RedisLockService } from './redis-lock.service';
@@ -28,14 +26,15 @@ export class TokenService {
 
   constructor(
     private readonly jwtService: JwtService,
-    @InjectRepository(RefreshToken)
-    private readonly refreshTokenRepo: Repository<RefreshToken>,
+    private readonly prisma: PrismaService,
     private readonly redisLockService: RedisLockService,
   ) {}
 
   // ─── Access Token ────────────────────────────────────────────────────────────
 
-  async generateAccessToken(user: User): Promise<string> {
+  async generateAccessToken(
+    user: Pick<User, 'id' | 'email' | 'role' | 'onboardingComplete'>,
+  ): Promise<string> {
     const payload: JwtPayload = {
       sub: user.id,
       email: user.email,
@@ -53,7 +52,7 @@ export class TokenService {
 
   async generateRefreshToken(userId: string): Promise<string> {
     const { record, rawToken } = this.createRefreshTokenRecord(userId);
-    await this.refreshTokenRepo.save(record);
+    await this.prisma.refreshToken.create({ data: record });
     this.logger.debug(
       `[generateRefreshToken] userId=${userId} recordId=${record.id}`,
     );
@@ -70,11 +69,12 @@ export class TokenService {
 
     const expiresAt = new Date(Date.now() + REFRESH_TOKEN_MAX_AGE_MS);
 
-    const record = this.refreshTokenRepo.create({
+    const record = {
+      id: uuidv4(),
       userId,
       tokenHash,
       expiresAt,
-    });
+    };
 
     return { record, rawToken };
   }
@@ -100,9 +100,9 @@ export class TokenService {
         `[rotateTokens] tokenHash=${hashedToken.slice(0, 16)}...`,
       );
 
-      const matchedRecord = await this.refreshTokenRepo.findOne({
+      const matchedRecord = await this.prisma.refreshToken.findFirst({
         where: { tokenHash: hashedToken },
-        relations: { user: true },
+        include: { user: true },
       });
 
       if (!matchedRecord) {
@@ -123,20 +123,22 @@ export class TokenService {
         this.logger.warn(
           `[rotateTokens] Token expired id=${matchedRecord.id} expiresAt=${matchedRecord.expiresAt.toISOString()}`,
         );
-        await this.refreshTokenRepo.delete({ id: matchedRecord.id });
+        await this.prisma.refreshToken.deleteMany({
+          where: { id: matchedRecord.id },
+        });
         throw new UnauthorizedException({
           error: 'SESSION_EXPIRED',
           message: 'Your session has expired. Please log in again.',
         });
       }
 
-      const deleteResult = await this.refreshTokenRepo.delete({
-        id: matchedRecord.id,
+      const deleteResult = await this.prisma.refreshToken.deleteMany({
+        where: { id: matchedRecord.id },
       });
 
-      if (deleteResult.affected === 0) {
+      if (deleteResult.count === 0) {
         this.logger.warn(
-          `[rotateTokens] Delete failed id=${matchedRecord.id} affected=0`,
+          `[rotateTokens] Delete failed id=${matchedRecord.id} count=0`,
         );
         throw new UnauthorizedException({
           error: 'SESSION_EXPIRED',
@@ -153,13 +155,18 @@ export class TokenService {
       const { record: newRecord, rawToken: newRawRefreshToken } =
         this.createRefreshTokenRecord(user.id);
 
-      await this.refreshTokenRepo.save(newRecord);
+      await this.prisma.refreshToken.create({ data: newRecord });
 
       this.logger.debug(
         `[rotateTokens] New token created and saved for userId=${user.id}`,
       );
 
-      const accessToken = await this.generateAccessToken(user);
+      const accessToken = await this.generateAccessToken({
+        id: user.id,
+        email: user.email,
+        role: user.role as unknown as UserRole | null,
+        onboardingComplete: user.onboardingComplete,
+      });
 
       return {
         accessToken,
@@ -236,9 +243,11 @@ export class TokenService {
       .update(rawRefreshToken)
       .digest('hex');
 
-    await this.refreshTokenRepo.delete({
-      ...(userId ? { userId } : {}),
-      tokenHash,
+    await this.prisma.refreshToken.deleteMany({
+      where: {
+        ...(userId ? { userId } : {}),
+        tokenHash,
+      },
     });
   }
 
@@ -248,10 +257,12 @@ export class TokenService {
       return;
     }
 
-    const deleteResult = await this.refreshTokenRepo.delete({ userId });
+    const deleteResult = await this.prisma.refreshToken.deleteMany({
+      where: { userId },
+    });
 
     this.logger.log(
-      `All refresh tokens invalidated for userId=${userId}, count=${deleteResult.affected ?? 0}`,
+      `All refresh tokens invalidated for userId=${userId}, count=${deleteResult.count}`,
     );
   }
 
