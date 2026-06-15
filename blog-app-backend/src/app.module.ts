@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { UsersModule } from './modules/users/users.module';
@@ -12,12 +11,6 @@ import { PrismaModule } from './prisma/prisma.module';
 @Module({
   imports: [
     PrismaModule,
-    TypeOrmModule.forRoot({
-      type: 'sqlite' as any,
-      database: 'blog-app.db',
-      autoLoadEntities: true,
-      synchronize: true,
-    }),
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

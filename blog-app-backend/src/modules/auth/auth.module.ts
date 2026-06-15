@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
-import { TypeOrmModule } from '@nestjs/typeorm';
 import { StringValue } from 'ms';
 import { env } from '../../config/env';
 import { MailModule } from '../mail/mail.module';
@@ -16,7 +15,6 @@ import { RedisLockService } from './services/redis-lock.service';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { RefreshToken } from './entities/refresh-token.entity';
 
 @Module({
   imports: [
@@ -25,7 +23,6 @@ import { RefreshToken } from './entities/refresh-token.entity';
       secret: env.JWT_ACCESS_SECRET,
       signOptions: { expiresIn: env.JWT_ACCESS_EXPIRES_IN as StringValue },
     }),
-    TypeOrmModule.forFeature([RefreshToken]),
     UsersModule,
     MailModule,
     QueueModule,
