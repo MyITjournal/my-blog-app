@@ -1,24 +1,44 @@
-const get = (key: string, fallback = ''): string => {
-  const value = process.env[key];
-  return value && value.length > 0 ? value : fallback;
-};
+import { createEnv } from '@t3-oss/env-core';
+import * as dotenv from 'dotenv';
+import { z } from 'zod';
 
-export const env = {
-  NODE_ENV: get('NODE_ENV', 'development'),
-  PORT: Number(get('PORT', '3000')),
-  FRONTEND_URL: get('FRONTEND_URL', 'http://localhost:5173'),
+dotenv.config();
 
-  JWT_ACCESS_SECRET: get('JWT_ACCESS_SECRET', 'dev-access-secret'),
-  JWT_ACCESS_EXPIRES_IN: get('JWT_ACCESS_EXPIRES_IN', '15m'),
-  JWT_REFRESH_SECRET: get('JWT_REFRESH_SECRET', 'dev-refresh-secret'),
-  JWT_RESET_SECRET: get('JWT_RESET_SECRET', 'dev-reset-secret'),
+export const env = createEnv({
+  server: {
+    NODE_ENV: z
+      .enum(['development', 'test', 'production', 'staging'])
+      .default('development'),
+    PORT: z.coerce.number().int().positive().default(3000),
 
-  CLIENT_ID: get('CLIENT_ID'),
-  CLIENT_SECRET: get('CLIENT_SECRET'),
-  GOOGLE_CALLBACK_URL: get(
-    'GOOGLE_CALLBACK_URL',
-    'http://localhost:3000/auth/google/callback',
-  ),
+    FRONTEND_URL: z.string().url(),
 
-  COOKIE_DOMAIN: get('COOKIE_DOMAIN', ''),
-};
+    JWT_ACCESS_SECRET: z
+      .string()
+      .min(32, 'JWT_ACCESS_SECRET must be at least 32 chars'),
+    JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
+    JWT_REFRESH_SECRET: z
+      .string()
+      .min(32, 'JWT_REFRESH_SECRET must be at least 32 chars'),
+    JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+    JWT_RESET_SECRET: z
+      .string()
+      .min(32, 'JWT_RESET_SECRET must be at least 32 chars'),
+
+    CLIENT_ID: z.string().min(1),
+    CLIENT_SECRET: z.string().min(1),
+
+    GOOGLE_CALLBACK_URL: z.string().url(),
+
+    COOKIE_DOMAIN: z.string().default(''),
+
+    SWAGGER_ENABLED: z
+      .enum(['true', 'false'])
+      .default('true')
+      .transform((value) => value === 'true'),
+  },
+  runtimeEnv: process.env,
+  emptyStringAsUndefined: true,
+});
+
+export type Env = typeof env;
