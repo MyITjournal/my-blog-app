@@ -3,7 +3,8 @@ provider = "prisma-client-js"
 }
 
 datasource db {
-provider = "sqlite"
+provider = "postgresql"
+url      = env("DATABASE_URL")
 }
 
 enum UserRole {
@@ -47,6 +48,7 @@ comments Comment[]
 model Post {
 id String @id @default(uuid())
 authorId String @map("author_id")
+categoryId String? @map("category_id")
 title String
 slug String @unique
 content String
@@ -58,11 +60,53 @@ updatedAt DateTime @updatedAt @map("updated_at")
 deletedAt DateTime? @map("deleted_at")
 
 author User @relation(fields: [authorId], references: [id], onDelete: Cascade)
+category Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
 comments Comment[]
+postTags PostTag[]
 
 @@index([authorId])
+@@index([categoryId])
 @@index([isPublished, createdAt])
 @@map("posts")
+}
+
+model Category {
+id String @id @default(uuid())
+name String @unique
+slug String @unique
+createdAt DateTime @default(now()) @map("created_at")
+updatedAt DateTime @updatedAt @map("updated_at")
+deletedAt DateTime? @map("deleted_at")
+
+posts Post[]
+
+@@map("categories")
+}
+
+model Tag {
+id String @id @default(uuid())
+name String @unique
+slug String @unique
+createdAt DateTime @default(now()) @map("created_at")
+updatedAt DateTime @updatedAt @map("updated_at")
+deletedAt DateTime? @map("deleted_at")
+
+postTags PostTag[]
+
+@@map("tags")
+}
+
+model PostTag {
+postId String @map("post_id")
+tagId String @map("tag_id")
+createdAt DateTime @default(now()) @map("created_at")
+
+post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+tag Tag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+@@id([postId, tagId])
+@@index([tagId])
+@@map("post_tags")
 }
 
 model Comment {
