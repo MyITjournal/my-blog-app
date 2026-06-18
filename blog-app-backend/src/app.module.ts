@@ -1,14 +1,16 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
-import { AuthModule } from './modules/auth/auth.module';
-import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
-import { UsersModule } from './modules/users/users.module';
-import { PostsModule } from './modules/posts/posts.module';
-import { CommentsModule } from './modules/comments/comments.module';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
-import { PrismaModule } from './prisma/prisma.module';
+import { AuthModule } from './modules/auth/auth.module.js';
+import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard.js';
+import { UsersModule } from './modules/users/users.module.js';
+import { PostsModule } from './modules/posts/posts.module.js';
+import { CommentsModule } from './modules/comments/comments.module.js';
+import { CategoriesModule } from './modules/categories/categories.module.js';
+import { TagsModule } from './modules/tags/tags.module.js';
+import { AppController } from './app.controller.js';
+import { AppService } from './app.service.js';
+import { PrismaModule } from './prisma/prisma.module.js';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { PrismaModule } from './prisma/prisma.module';
     UsersModule,
     PostsModule,
     CommentsModule,
+    CategoriesModule,
+    TagsModule,
     AuthModule,
   ],
   controllers: [AppController],
