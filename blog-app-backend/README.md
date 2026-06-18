@@ -184,6 +184,12 @@ Prisma schema is in `prisma/schema.prisma`. Key models:
 - **RefreshToken** — hashed token storage
 - **ResetPassword** — password reset token lifecycle
 
+## Deployment
+
+The API is live at **[https://scribepoint.onrender.com](https://scribepoint.onrender.com)**.
+
+Swagger documentation is available at [https://scribepoint.onrender.com/docs](https://scribepoint.onrender.com/docs).
+
 ## License
 
 [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
