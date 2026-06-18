@@ -1,98 +1,189 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# Blog App — Backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+A RESTful blog API built with **NestJS 11**, **Prisma 6**, and **PostgreSQL** (development). Supports full authentication, posts with tags and categories, comments, and public author profiles.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
 
-## Description
+## Tech Stack
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Layer          | Technology                          |
+| -------------- | ----------------------------------- |
+| Framework      | NestJS 11                           |
+| ORM            | Prisma 6                            |
+| Database       | PostgreSQL (dev)                    |
+| Auth           | JWT + httpOnly refresh token cookie |
+| OAuth          | Google OAuth 2.0                    |
+| Validation     | class-validator + class-transformer |
+| Env Validation | @t3-oss/env-core + zod              |
+| Rate Limiting  | @nestjs/throttler                   |
+| API Docs       | Swagger (`/docs`)                   |
 
-## Project setup
+---
+
+## Getting Started
+
+### 1. Install dependencies
 
 ```bash
-$ npm install
+npm install
 ```
 
-## Compile and run the project
+### 2. Generate Prisma client
 
 ```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+npx prisma generate
 ```
 
-## Run tests
+### 3. Push schema to database
 
 ```bash
-# unit tests
-$ npm run test
+npx prisma db push
+```
+
+### 4. Set environment variables
+
+Copy `.env.example` to `.env` and fill in the values:
+
+```bash
+cp .env.example .env
+```
+
+Required variables:
+
+```env
+# App
+NODE_ENV=development
+PORT=3000
+FRONTEND_URL=http://localhost:5173
+
+# Database
+DATABASE_URL="postgresql://username:password@localhost:5432/database_name"
+
+# JWT — secrets must be at least 32 characters
+JWT_ACCESS_SECRET=your-access-secret-min-32-chars
+JWT_ACCESS_EXPIRES_IN=15m
+JWT_REFRESH_SECRET=your-refresh-secret-min-32-chars
+JWT_REFRESH_EXPIRES_IN=7d
+JWT_RESET_SECRET=your-reset-secret-min-32-chars
+
+# Google OAuth
+# Create credentials at https://console.cloud.google.com/apis/credentials
+CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+CLIENT_SECRET=your-google-client-secret
+GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
+
+# Cookies — leave empty in development
+COOKIE_DOMAIN=
+
+# Swagger
+SWAGGER_ENABLED=true
+```
+
+> **Note:** Environment variables are validated on startup with `zod`. The app will refuse to start if any required variable is missing or invalid (e.g. JWT secrets shorter than 32 characters).
+
+### 5. Run in development
+
+```bash
+npm run start:dev
+```
+
+The server starts at `http://localhost:3000`.  
+Swagger UI is available at `http://localhost:3000/docs`.
+
+---
+
+## Available Scripts
+
+```bash
+# Development (watch mode)
+npm run start:dev
+
+# Production build
+npm run build
+npm run start:prod
+
+# Unit tests
+npm run test
+
+# Unit tests (watch)
+npm run test:watch
 
 # e2e tests
-$ npm run test:e2e
+npm run test:e2e
 
-# test coverage
-$ npm run test:cov
+# Test coverage
+npm run test:cov
+
+# Lint
+npm run lint
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Project Structure
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+```
+src/
+├── common/
+│   ├── decorators/        # @CurrentUser, @Public
+│   └── redis/             # In-memory Redis-compatible service
+├── config/
+│   └── env.ts             # Typed + validated environment config (zod)
+├── modules/
+│   ├── auth/              # Registration, login, JWT, OTP, Google OAuth
+│   ├── categories/        # Post categories (CRUD)
+│   ├── comments/          # Post comments (nested under posts)
+│   ├── mail/              # Email sending service (stub in development)
+│   ├── posts/             # Blog posts with publish/unpublish workflow
+│   ├── queue/             # Background job queue
+│   ├── rate-limiter/      # Custom rate limiter
+│   ├── tags/              # Post tags (CRUD)
+│   └── users/             # User management and author profiles
+└── prisma/
+    ├── prisma.module.ts
+    └── prisma.service.ts
+prisma/
+├── schema.prisma          # Data models
+└── seed.ts                # Local demo data (not committed)
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+---
 
-## Resources
+## API Overview
 
-Check out a few resources that may come in handy when working with NestJS:
+Full interactive documentation is available at **`http://localhost:3000/docs`** (Swagger UI) when the server is running.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### Module summary
 
-## Support
+| Module     | Base Path                 | Public Endpoints                         | Auth Required                     |
+| ---------- | ------------------------- | ---------------------------------------- | --------------------------------- |
+| Auth       | `/auth`                   | register, login, OTP flows, Google OAuth | refresh, logout, me               |
+| Posts      | `/posts`                  | list published, get by slug              | create, update, publish, my posts |
+| Comments   | `/posts/:postId/comments` | list comments                            | create, delete                    |
+| Categories | `/categories`             | list                                     | create                            |
+| Tags       | `/tags`                   | list                                     | create                            |
+| Users      | `/users`                  | author profile, author posts             | update own profile, admin ops     |
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+### Authentication
 
-## Stay in touch
+- Login returns an `accessToken` (use in `Authorization: Bearer <token>` header).
+- A `refreshToken` is set as an **httpOnly cookie** automatically.
+- Call `POST /auth/refresh-token` when the access token expires — the cookie is sent automatically by the browser.
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+---
+
+## Database
+
+Prisma schema is in `prisma/schema.prisma`. Key models:
+
+- **User** — email/password or Google auth, OTP verification, soft-delete
+- **Post** — title, slug, content, excerpt, publish status, soft-delete
+- **Category** — optional post category
+- **Tag / PostTag** — many-to-many post tagging
+- **Comment** — nested under posts, soft-delete
+- **RefreshToken** — hashed token storage
+- **ResetPassword** — password reset token lifecycle
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+[MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
