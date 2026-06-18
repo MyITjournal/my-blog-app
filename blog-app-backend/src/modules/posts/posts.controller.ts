@@ -12,12 +12,12 @@ import {
   Query,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
-import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { Public } from '../../common/decorators/public.decorator';
-import { CreatePostDto } from './dto/create-post.dto';
-import { PostsQueryDto } from './dto/posts-query.dto';
-import { UpdatePostDto } from './dto/update-post.dto';
-import { PostsService } from './posts.service';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Public } from '../../common/decorators/public.decorator.js';
+import { CreatePostDto } from './dto/create-post.dto.js';
+import { PostsQueryDto } from './dto/posts-query.dto.js';
+import { UpdatePostDto } from './dto/update-post.dto.js';
+import { PostsService } from './posts.service.js';
 
 @ApiTags('posts')
 @Controller({ path: 'posts' })

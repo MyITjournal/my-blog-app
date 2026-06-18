@@ -30,4 +30,17 @@ export class PostEntity {
 
   @ApiProperty({ type: 'string', format: 'date-time' })
   updatedAt: Date;
+
+  @ApiProperty({
+    nullable: true,
+    type: 'object',
+    additionalProperties: true,
+  })
+  category: { id: string; name: string; slug: string } | null;
+
+  @ApiProperty({
+    type: 'array',
+    items: { type: 'object', additionalProperties: true },
+  })
+  tags: Array<{ id: string; name: string; slug: string }>;
 }

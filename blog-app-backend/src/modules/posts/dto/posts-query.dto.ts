@@ -31,6 +31,16 @@ export class PostsQueryDto {
   @IsUUID()
   authorId?: string;
 
+  @ApiProperty({ required: false, format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  categoryId?: string;
+
+  @ApiProperty({ required: false, format: 'uuid' })
+  @IsOptional()
+  @IsUUID()
+  tagId?: string;
+
   @ApiProperty({
     required: false,
     description: 'Search for titles, excerpts and contents',

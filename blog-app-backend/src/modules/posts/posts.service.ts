@@ -5,33 +5,43 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma, Post } from '@prisma/client';
-import { PrismaService } from '../../prisma/prisma.service';
-import { CreatePostDto } from './dto/create-post.dto';
-import { PostsQueryDto } from './dto/posts-query.dto';
-import { UpdatePostDto } from './dto/update-post.dto';
-import { PostEntity } from './entities/post.entity';
+import { PrismaService } from '../../prisma/prisma.service.js';
+import { CreatePostDto } from './dto/create-post.dto.js';
+import { PostsQueryDto } from './dto/posts-query.dto.js';
+import { UpdatePostDto } from './dto/update-post.dto.js';
+import { PostEntity } from './entities/post.entity.js';
 
-type PostSortableField = 'createdAt' | 'updatedAt' | 'publishedAt' | 'title';
+type PostWithRelations = Post & {
+  category: { id: string; name: string; slug: string } | null;
+  postTags: Array<{ tag: { id: string; name: string; slug: string } }>;
+};
+
+const POST_INCLUDE = {
+  category: {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+    },
+  },
+  postTags: {
+    select: {
+      tag: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+    },
+  },
+} as const;
 
 @Injectable()
 export class PostsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private toEntity(
-    post: Pick<
-      Post,
-      | 'id'
-      | 'authorId'
-      | 'title'
-      | 'slug'
-      | 'content'
-      | 'excerpt'
-      | 'isPublished'
-      | 'publishedAt'
-      | 'createdAt'
-      | 'updatedAt'
-    >,
-  ): PostEntity {
+  private toEntity(post: PostWithRelations): PostEntity {
     return {
       id: post.id,
       authorId: post.authorId,
@@ -43,6 +53,8 @@ export class PostsService {
       publishedAt: post.publishedAt,
       createdAt: post.createdAt,
       updatedAt: post.updatedAt,
+      category: post.category,
+      tags: post.postTags.map((postTag) => postTag.tag),
     };
   }
 
@@ -56,7 +68,11 @@ export class PostsService {
       .replace(/^-|-$/g, '');
   }
 
-  private async buildUniqueSlug(title: string, customSlug?: string) {
+  private async buildUniqueSlug(
+    title: string,
+    customSlug?: string,
+    options?: { excludePostId?: string },
+  ): Promise<string> {
     const base = this.slugify(
       customSlug && customSlug.length > 0 ? customSlug : title,
     );
@@ -64,13 +80,52 @@ export class PostsService {
       throw new ConflictException('Unable to generate a valid slug from title');
     }
 
-    const existing = await this.prisma.post.findUnique({
-      where: { slug: base },
+    const existing = await this.prisma.post.findFirst({
+      where: {
+        slug: base,
+        ...(options?.excludePostId ? { id: { not: options.excludePostId } } : {}),
+      },
     });
     if (!existing) return base;
 
     const suffix = Math.random().toString(36).slice(2, 8);
     return `${base}-${suffix}`;
+  }
+
+  private async ensureCategoryExists(categoryId?: string): Promise<void> {
+    if (!categoryId) {
+      return;
+    }
+
+    const category = await this.prisma.category.findFirst({
+      where: { id: categoryId, deletedAt: null },
+      select: { id: true },
+    });
+
+    if (!category) {
+      throw new NotFoundException(`Category ${categoryId} not found`);
+    }
+  }
+
+  private async getValidatedTagIds(tagIds?: string[]): Promise<string[]> {
+    if (!tagIds || tagIds.length === 0) {
+      return [];
+    }
+
+    const uniqueTagIds = [...new Set(tagIds)];
+    const foundTags = await this.prisma.tag.findMany({
+      where: {
+        id: { in: uniqueTagIds },
+        deletedAt: null,
+      },
+      select: { id: true },
+    });
+
+    if (foundTags.length !== uniqueTagIds.length) {
+      throw new NotFoundException('One or more tags were not found');
+    }
+
+    return uniqueTagIds;
   }
 
   private buildSortOrder(
@@ -118,6 +173,14 @@ export class PostsService {
       filters.push({ authorId: query.authorId });
     }
 
+    if (query.categoryId) {
+      filters.push({ categoryId: query.categoryId });
+    }
+
+    if (query.tagId) {
+      filters.push({ postTags: { some: { tagId: query.tagId } } });
+    }
+
     const searchFilter = this.buildSearchFilter(query.search);
     if (Object.keys(searchFilter).length > 0) {
       filters.push(searchFilter);
@@ -128,6 +191,8 @@ export class PostsService {
 
   async create(authorId: string, dto: CreatePostDto): Promise<PostEntity> {
     const slug = await this.buildUniqueSlug(dto.title, dto.slug);
+    await this.ensureCategoryExists(dto.categoryId);
+    const tagIds = await this.getValidatedTagIds(dto.tagIds);
 
     const created = await this.prisma.post.create({
       data: {
@@ -136,7 +201,15 @@ export class PostsService {
         slug,
         content: dto.content,
         excerpt: dto.excerpt ?? null,
+        categoryId: dto.categoryId,
+        postTags:
+          tagIds.length > 0
+            ? {
+                create: tagIds.map((tagId) => ({ tagId })),
+              }
+            : undefined,
       },
+      include: POST_INCLUDE,
     });
 
     return this.toEntity(created);
@@ -153,6 +226,7 @@ export class PostsService {
         skip: (page - 1) * limit,
         take: limit,
         orderBy: this.buildSortOrder(query),
+        include: POST_INCLUDE,
       }),
       this.prisma.post.count({ where }),
     ]);
@@ -180,6 +254,7 @@ export class PostsService {
         skip: (page - 1) * limit,
         take: limit,
         orderBy: this.buildSortOrder(query),
+        include: POST_INCLUDE,
       }),
       this.prisma.post.count({ where }),
     ]);
@@ -200,6 +275,7 @@ export class PostsService {
         isPublished: true,
         deletedAt: null,
       },
+      include: POST_INCLUDE,
     });
 
     if (!post) {
@@ -212,6 +288,7 @@ export class PostsService {
   async findOneForAuthor(authorId: string, id: string): Promise<PostEntity> {
     const post = await this.prisma.post.findFirst({
       where: { id, authorId, deletedAt: null },
+      include: POST_INCLUDE,
     });
 
     if (!post) {
@@ -238,19 +315,41 @@ export class PostsService {
       throw new ForbiddenException('You are not allowed to update this post');
     }
 
+    await this.ensureCategoryExists(dto.categoryId);
+    const tagIds = dto.tagIds
+      ? await this.getValidatedTagIds(dto.tagIds)
+      : undefined;
+
     const slug =
       dto.slug || dto.title
-        ? await this.buildUniqueSlug(dto.title ?? existing.title, dto.slug)
+        ? await this.buildUniqueSlug(dto.title ?? existing.title, dto.slug, {
+            excludePostId: id,
+          })
         : undefined;
 
-    const updated = await this.prisma.post.update({
-      where: { id },
-      data: {
-        title: dto.title,
-        content: dto.content,
-        excerpt: dto.excerpt,
-        ...(slug ? { slug } : {}),
-      },
+    const updated = await this.prisma.$transaction(async (tx) => {
+      if (tagIds) {
+        await tx.postTag.deleteMany({ where: { postId: id } });
+      }
+
+      return tx.post.update({
+        where: { id },
+        data: {
+          title: dto.title,
+          content: dto.content,
+          excerpt: dto.excerpt,
+          categoryId: dto.categoryId,
+          ...(slug ? { slug } : {}),
+          ...(tagIds
+            ? {
+                postTags: {
+                  create: tagIds.map((tagId) => ({ tagId })),
+                },
+              }
+            : {}),
+        },
+        include: POST_INCLUDE,
+      });
     });
 
     return this.toEntity(updated);
@@ -262,6 +361,7 @@ export class PostsService {
     const updated = await this.prisma.post.update({
       where: { id: post.id },
       data: { isPublished: true, publishedAt: new Date() },
+      include: POST_INCLUDE,
     });
 
     return this.toEntity(updated);
@@ -273,6 +373,7 @@ export class PostsService {
     const updated = await this.prisma.post.update({
       where: { id: post.id },
       data: { isPublished: false, publishedAt: null },
+      include: POST_INCLUDE,
     });
 
     return this.toEntity(updated);
