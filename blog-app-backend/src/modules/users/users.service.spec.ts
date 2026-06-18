@@ -11,6 +11,7 @@ import { UsersService, EMAIL_ALREADY_EXISTS } from './users.service';
 import { UserModelAction } from './actions/user.action';
 import { ResetPasswordModelAction } from './actions/reset-password.action';
 import { User, AuthProvider } from './entities/user.entity';
+import { PostsService } from '../posts/posts.service';
 
 jest.mock('argon2', () => ({
   hash: jest.fn().mockResolvedValue('mocked-password-hash'),
@@ -45,6 +46,7 @@ describe('UsersService', () => {
         UsersService,
         { provide: UserModelAction, useValue: mockAction },
         { provide: ResetPasswordModelAction, useValue: {} },
+        { provide: PostsService, useValue: { listPublished: jest.fn() } },
       ],
     }).compile();
 
