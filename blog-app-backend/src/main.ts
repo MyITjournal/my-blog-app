@@ -29,7 +29,7 @@ async function bootstrap() {
       .build();
     const document = SwaggerModule.createDocument(app, config);
     SwaggerModule.setup('docs', app, document, {
-      swaggerOptions: { persistAuthorization: true },
+      swaggerOptions: { persistAuthorization: true, tagsSorter: 'alpha' },
     });
   }
 
