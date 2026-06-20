@@ -12,7 +12,7 @@ export const env = createEnv({
     PORT: z.coerce.number().int().positive().default(3000),
 
     FRONTEND_URL: z.string().url(),
-
+    APP_URL: z.string().url(),
     DATABASE_URL: z.string().min(1),
 
     JWT_ACCESS_SECRET: z
@@ -38,6 +38,9 @@ export const env = createEnv({
       .enum(['true', 'false'])
       .default('true')
       .transform((value) => value === 'true'),
+    RESEND_API_KEY: z.string().min(1),
+    MAIL_FROM: z.string().min(1),
+    CONTACT_EMAIL: z.string().min(1),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
