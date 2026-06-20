@@ -37,6 +37,7 @@ export const env = createEnv({
       .string()
       .default('http://localhost:3000,http://localhost:5173')
       .transform((val) => val.split(',').map((v) => v.trim())),
+    OTP_OVERRIDE: z.string().optional(),
 
     SWAGGER_ENABLED: z
       .enum(['true', 'false'])

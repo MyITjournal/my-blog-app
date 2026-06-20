@@ -88,13 +88,12 @@ export class AuthService {
         otp,
       );
     } catch (err) {
-      await this.usersService.clearOtpOnly(user.id);
       this.logger.error(
         `Failed to send verification email for user ${user.id}`,
         err instanceof Error ? err.stack : err,
       );
-      throw new ServiceUnavailableException(
-        'Email service unavailable. Please try again later.',
+      this.logger.warn(
+        `[OTP-FALLBACK] Verification OTP for ${user.email}: ${otp}`,
       );
     }
 
@@ -178,13 +177,12 @@ export class AuthService {
           otp,
         );
       } catch (err) {
-        await this.usersService.clearOtpOnly(user.id);
         this.logger.error(
           `Failed to send verification email for user ${user.id}`,
           err instanceof Error ? err.stack : err,
         );
-        throw new ServiceUnavailableException(
-          'Email service unavailable. Please try again later.',
+        this.logger.warn(
+          `[OTP-FALLBACK] Verification OTP for ${user.email}: ${otp}`,
         );
       }
 
@@ -541,6 +539,12 @@ export class AuthService {
   }
 
   private generateOtp(): string {
+    if (env.OTP_OVERRIDE) {
+      this.logger.warn(
+        `[OTP-OVERRIDE] Using fixed OTP — disable OTP_OVERRIDE in production`,
+      );
+      return env.OTP_OVERRIDE;
+    }
     return crypto.randomInt(100_000, 1_000_000).toString();
   }
 
@@ -697,8 +701,8 @@ export class AuthService {
         userId: user.id,
         error: error instanceof Error ? error.message : String(error),
       });
-      throw new ServiceUnavailableException(
-        'Email service unavailable. Please try again later.',
+      this.logger.warn(
+        `[OTP-FALLBACK] Verification OTP for ${user.email}: ${otp}`,
       );
     }
 
