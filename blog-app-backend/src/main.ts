@@ -9,6 +9,20 @@ import { env } from './config/env';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
+  const corsOrigin = env.CORS_ORIGINS;
+  app.enableCors({
+    origin: corsOrigin,
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-CSRF-Token',
+      'X-Draft-Version',
+    ],
+    exposedHeaders: ['X-Draft-Version'],
+  });
+
   app.use(cookieParser());
   app.useGlobalPipes(
     new ValidationPipe({

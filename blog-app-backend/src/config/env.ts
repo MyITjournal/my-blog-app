@@ -33,6 +33,10 @@ export const env = createEnv({
     GOOGLE_CALLBACK_URL: z.string().url(),
 
     COOKIE_DOMAIN: z.string().default(''),
+    CORS_ORIGINS: z
+      .string()
+      .default('http://localhost:3000,http://localhost:5173')
+      .transform((val) => val.split(',').map((v) => v.trim())),
 
     SWAGGER_ENABLED: z
       .enum(['true', 'false'])
