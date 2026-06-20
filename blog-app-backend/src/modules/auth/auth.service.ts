@@ -5,7 +5,7 @@ import {
   HttpException,
   HttpStatus,
   Injectable,
-  InternalServerErrorException,
+  ServiceUnavailableException,
   Logger,
   UnauthorizedException,
 } from '@nestjs/common';
@@ -93,8 +93,8 @@ export class AuthService {
         `Failed to send verification email for user ${user.id}`,
         err instanceof Error ? err.stack : err,
       );
-      throw new InternalServerErrorException(
-        'Failed to send verification email. Please try again.',
+      throw new ServiceUnavailableException(
+        'Email service unavailable. Please try again later.',
       );
     }
 
@@ -183,8 +183,8 @@ export class AuthService {
           `Failed to send verification email for user ${user.id}`,
           err instanceof Error ? err.stack : err,
         );
-        throw new InternalServerErrorException(
-          'Failed to send verification email. Please try again.',
+        throw new ServiceUnavailableException(
+          'Email service unavailable. Please try again later.',
         );
       }
 
@@ -455,7 +455,14 @@ export class AuthService {
 
     await this.tokenService.invalidateAllRefreshTokens(user.id);
 
-    await this.mailService.sendPasswordChangedEmail(user.email);
+    try {
+      await this.mailService.sendPasswordChangedEmail(user.email);
+    } catch (error) {
+      this.logger.error('Failed to send password-changed notification email', {
+        userId: user.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
 
     return {
       status: 'success',
@@ -679,11 +686,21 @@ export class AuthService {
     const otpExpiresAt = new Date(Date.now() + OTP_TTL_MS);
     await this.usersService.storeOtpHash(user.id, otpHash, otpExpiresAt);
 
-    await this.mailService.sendVerificationOtp(
-      user.email,
-      user.fullName ?? '',
-      otp,
-    );
+    try {
+      await this.mailService.sendVerificationOtp(
+        user.email,
+        user.fullName ?? '',
+        otp,
+      );
+    } catch (error) {
+      this.logger.error('Failed to send OTP email during resend', {
+        userId: user.id,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      throw new ServiceUnavailableException(
+        'Email service unavailable. Please try again later.',
+      );
+    }
 
     return { message: 'OTP has been sent successfully' };
   }
