@@ -23,18 +23,10 @@ import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyOtpDto } from './dto/verify-otp.dto';
 import { VerifyResetOtpDto } from './dto/verify-reset-otp.dto';
 import { JwtPayload } from './strategies/jwt.strategy';
-import { QueueService } from '../queue/queue.service';
 import { MailService } from '../mail/mail.service';
 import { RedisService } from '../../common/redis/redis.service';
 import { TokenService } from './services/token.service';
 import type { Request, Response } from 'express';
-import {
-  QUEUE_JOB_NAMES,
-  QUEUE_NAMES,
-} from '../queue/config/queue-names.constant';
-import { PasswordChangedEmailData } from '../mail/interfaces/password-changed-email.interface';
-import { AccountLockedEmailData } from '../mail/interfaces/account-locked-email.interface';
-import { NewIpLoginEmailData } from '../mail/interfaces/new-ip-login-email.interface';
 import { GoogleUser } from './interfaces/google.interface';
 
 const FORGOT_PASSWORD_GENERIC_MSG =
@@ -72,7 +64,6 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
-    private readonly queueService: QueueService,
     private readonly rateLimiterService: RateLimiterService,
     private readonly mailService: MailService,
     private readonly redisService: RedisService,
@@ -91,15 +82,15 @@ export class AuthService {
     await this.usersService.storeOtpHash(user.id, otpHash, otpExpiresAt);
 
     try {
-      await this.queueService.addJob(
-        QUEUE_NAMES.EMAIL,
-        QUEUE_JOB_NAMES.EMAIL.SEND_OTP,
-        { to: user.email, otp, fullName: user.fullName ?? '' },
+      await this.mailService.sendVerificationOtp(
+        user.email,
+        user.fullName ?? '',
+        otp,
       );
     } catch (err) {
       await this.usersService.clearOtpOnly(user.id);
       this.logger.error(
-        `Failed to enqueue verification email for user ${user.id}`,
+        `Failed to send verification email for user ${user.id}`,
         err instanceof Error ? err.stack : err,
       );
       throw new InternalServerErrorException(
@@ -181,15 +172,15 @@ export class AuthService {
       await this.usersService.storeOtpHash(user.id, otpHash, otpExpiresAt);
 
       try {
-        await this.queueService.addJob(
-          QUEUE_NAMES.EMAIL,
-          QUEUE_JOB_NAMES.EMAIL.SEND_OTP,
-          { to: user.email, otp, fullName: user.fullName ?? '' },
+        await this.mailService.sendVerificationOtp(
+          user.email,
+          user.fullName ?? '',
+          otp,
         );
       } catch (err) {
         await this.usersService.clearOtpOnly(user.id);
         this.logger.error(
-          `Failed to enqueue verification email for user ${user.id}`,
+          `Failed to send verification email for user ${user.id}`,
           err instanceof Error ? err.stack : err,
         );
         throw new InternalServerErrorException(
@@ -229,11 +220,7 @@ export class AuthService {
         const lockedUntil = new Date(
           Date.now() + BRUTE_LOCKOUT_SECONDS * 1000,
         ).toUTCString();
-        void this.queueService.addJob<AccountLockedEmailData>(
-          QUEUE_NAMES.EMAIL,
-          QUEUE_JOB_NAMES.EMAIL.ACCOUNT_LOCKED,
-          { to: user.email, lockedUntil },
-        );
+        void this.mailService.sendAccountLockedEmail(user.email, lockedUntil);
       }
       throw new UnauthorizedException({
         error: 'INVALID_CREDENTIALS',
@@ -245,10 +232,10 @@ export class AuthService {
 
     const isNewIp = user.lastLoginIp !== ip;
     if (isNewIp && user.lastLoginIp !== null) {
-      void this.queueService.addJob<NewIpLoginEmailData>(
-        QUEUE_NAMES.EMAIL,
-        QUEUE_JOB_NAMES.EMAIL.NEW_IP_LOGIN,
-        { to: user.email, ip, timestamp: new Date().toUTCString() },
+      void this.mailService.sendNewIpLoginEmail(
+        user.email,
+        ip,
+        new Date().toUTCString(),
       );
     }
 
@@ -468,11 +455,7 @@ export class AuthService {
 
     await this.tokenService.invalidateAllRefreshTokens(user.id);
 
-    await this.queueService.addJob<PasswordChangedEmailData>(
-      QUEUE_NAMES.EMAIL,
-      QUEUE_JOB_NAMES.EMAIL.SEND_PASSWORD_CHANGED,
-      { to: user.email },
-    );
+    await this.mailService.sendPasswordChangedEmail(user.email);
 
     return {
       status: 'success',
@@ -696,10 +679,10 @@ export class AuthService {
     const otpExpiresAt = new Date(Date.now() + OTP_TTL_MS);
     await this.usersService.storeOtpHash(user.id, otpHash, otpExpiresAt);
 
-    await this.queueService.addJob(
-      QUEUE_NAMES.EMAIL,
-      QUEUE_JOB_NAMES.EMAIL.SEND_OTP,
-      { to: user.email, otp, fullName: user.fullName ?? '' },
+    await this.mailService.sendVerificationOtp(
+      user.email,
+      user.fullName ?? '',
+      otp,
     );
 
     return { message: 'OTP has been sent successfully' };

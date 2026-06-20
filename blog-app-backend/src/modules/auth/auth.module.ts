@@ -6,7 +6,6 @@ import { env } from '../../config/env';
 import { MailModule } from '../mail/mail.module';
 import { RateLimiterModule } from '../rate-limiter/rate-limiter.module';
 import { UsersModule } from '../users/users.module';
-import { QueueModule } from '../queue/queue.module';
 import { RedisModule } from '../../common/redis/redis.module';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
@@ -25,7 +24,6 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
     }),
     UsersModule,
     MailModule,
-    QueueModule,
     RateLimiterModule,
     RedisModule,
   ],
