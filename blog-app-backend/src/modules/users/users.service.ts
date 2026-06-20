@@ -218,21 +218,12 @@ export class UsersService {
         });
       }
 
-      // Unverified — re-register by updating in place (idempotent)
-      const passwordHash = await argon2.hash(dto.password);
-      const updated = await this.userModelAction.update({
-        ...NO_TRANSACTION,
-        identifierOptions: { id: existing.id },
-        updatePayload: {
-          password: passwordHash,
-          otpHash: null,
-          otpExpiresAt: null,
-        },
+      // Unverified — reject and direct to resend-otp
+      throw new ConflictException({
+        error: 'PENDING_VERIFICATION',
+        message:
+          'An account with this email is already registered and awaiting verification. Please check your inbox or request a new verification code.',
       });
-      if (!updated) {
-        throw new InternalServerErrorException('Failed to update user');
-      }
-      return updated;
     }
 
     const passwordHash = await argon2.hash(dto.password);
