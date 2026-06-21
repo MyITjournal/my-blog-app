@@ -13,7 +13,12 @@ import {
   ValidationPipe,
 } from '@nestjs/common';
 import type { Request, Response } from 'express';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { env } from '../../config/env';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import type { AuthenticatedUser } from '../../common/decorators/current-user.decorator';
@@ -223,6 +228,23 @@ export class AuthController {
   @Public()
   @Post('resend-otp')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Resend OTP verification code',
+    description:
+      'Sends a new one-time password (OTP) to the provided email address. Use this when the original OTP has expired or was not received. The previous OTP, if any, is invalidated once a new one is sent.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'OTP has been resent successfully to the provided email',
+  })
+  @ApiResponse({
+    status: 404,
+    description: 'No account found with the provided email address',
+  })
+  @ApiResponse({
+    status: 400,
+    description: 'Email is already verified or invalid',
+  })
   async resendOtp(@Body() dto: ResendOtpDto) {
     return this.authService.resendOtp(dto.email);
   }
