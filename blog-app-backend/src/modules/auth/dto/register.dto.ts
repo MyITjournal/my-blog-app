@@ -10,6 +10,24 @@ import {
 import { Transform } from 'class-transformer';
 
 export class RegisterDto {
+  @ApiProperty({ example: 'Jane' })
+  @IsNotEmpty({ message: 'First name is required.' })
+  @IsString({ message: 'First name must be a string.' })
+  @MaxLength(50, { message: 'First name must not be more than 50 characters.' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  firstName: string;
+
+  @ApiProperty({ example: 'Doe' })
+  @IsNotEmpty({ message: 'Last name is required.' })
+  @IsString({ message: 'Last name must be a string.' })
+  @MaxLength(50, { message: 'Last name must not be more than 50 characters.' })
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value === 'string' ? value.trim() : value,
+  )
+  lastName: string;
+
   @ApiProperty({ example: 'user@example.com' })
   @IsNotEmpty({ message: 'Email address is required.' })
   @IsEmail({}, { message: 'Please enter a valid email address.' })

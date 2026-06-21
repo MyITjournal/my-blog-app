@@ -74,6 +74,8 @@ export class AuthService {
     const user = await this.usersService.createEmailUser({
       email: dto.email,
       password: dto.password,
+      firstName: dto.firstName,
+      lastName: dto.lastName,
     });
     const otp = this.generateOtp();
     const otpHash = await argon2.hash(otp);
