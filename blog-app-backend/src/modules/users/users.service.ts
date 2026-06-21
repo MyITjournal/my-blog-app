@@ -206,10 +206,12 @@ export class UsersService {
   async createEmailUser(dto: {
     email: string;
     password: string;
+    firstName: string;
+    lastName: string;
   }): Promise<User> {
     const lowercasedEmail = dto.email.toLowerCase();
     const existing = await this.userModelAction.findByEmail(lowercasedEmail);
-
+    const fullName = `${dto.firstName} ${dto.lastName}`.trim();
     if (existing) {
       if (existing.isVerified) {
         throw new ConflictException({
@@ -234,6 +236,7 @@ export class UsersService {
         password: passwordHash,
         authProvider: AuthProvider.EMAIL,
         role: null,
+        fullName,
         otpHash: null,
         otpExpiresAt: null,
       },
