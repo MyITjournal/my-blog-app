@@ -8,29 +8,22 @@ export type AuthCookieBaseOptions = {
 /**
  * Resolves httpOnly auth cookie attributes by environment.
  *
- * - production: shared backend parent domain (COOKIE_DOMAIN), SameSite=strict
- * - staging: shared backend parent domain (COOKIE_DOMAIN), SameSite=none for cross-origin frontends
+ * - production: SameSite=None; Secure for cross-domain frontends (e.g. Vercel + Render)
+ * - staging: SameSite=None; Secure for cross-origin frontends
  * - development/test: host-only, lax for local HTTP
  */
 export function resolveAuthCookieOptions(
   nodeEnv: string,
   cookieDomain: string,
 ): AuthCookieBaseOptions {
-  if (nodeEnv === 'production') {
-    return {
-      secure: true,
-      sameSite: 'strict',
-      path: '/',
-      domain: cookieDomain,
-    };
-  }
+  const domain = cookieDomain.length > 0 ? cookieDomain : undefined;
 
-  if (nodeEnv === 'staging') {
+  if (nodeEnv === 'production' || nodeEnv === 'staging') {
     return {
       secure: true,
       sameSite: 'none',
       path: '/',
-      domain: cookieDomain,
+      ...(domain ? { domain } : {}),
     };
   }
 
