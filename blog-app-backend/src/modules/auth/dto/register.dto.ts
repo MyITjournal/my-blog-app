@@ -21,7 +21,8 @@ export class RegisterDto {
 
   @ApiProperty({
     description:
-      'Min 8 chars, at least one uppercase letter, one number, one special character.',
+      'Password must be between 8–128 characters and must include at least one uppercase letter, one number, and one special character.',
+    example: 'Str0ng!Pass',
     minLength: 8,
     maxLength: 128,
   })

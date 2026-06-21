@@ -49,7 +49,30 @@ export class AuthController {
   @Public()
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Register a new user with email and password' })
+  @ApiOperation({
+    summary: 'Register a new user',
+    description:
+      'Creates a new user account with email and password. The account is created in an unverified state — an OTP is sent to the provided email, which must be verified before the user can log in.',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Account created. Verification code sent to email.',
+    schema: {
+      example: {
+        status: 'pending_verification',
+        message: 'A verification code has been sent to your email address.',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Validation failed — invalid email format or password does not meet requirements',
+  })
+  @ApiResponse({
+    status: 409,
+    description: 'An account with this email already exists',
+  })
   async register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }
