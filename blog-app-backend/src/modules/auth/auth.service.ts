@@ -42,7 +42,7 @@ export interface AuthResponse extends AuthTokens {
 }
 
 export interface RegisterSuccessResponse {
-  status: 'success';
+  status: 'pending_verification';
   message: string;
 }
 
@@ -98,7 +98,7 @@ export class AuthService {
     }
 
     return {
-      status: 'success',
+      status: 'pending_verification',
       message: 'A verification code has been sent to your email address.',
     };
   }
@@ -187,7 +187,7 @@ export class AuthService {
       }
 
       return {
-        status: 'success',
+        status: 'pending_verification',
         message: 'A verification code has been sent to your email address.',
       };
     }
