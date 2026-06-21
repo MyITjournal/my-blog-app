@@ -163,7 +163,7 @@ export class AuthService {
     }
 
     if (!user.isVerified) {
-      await this.usersService.clearOtp(user.id);
+      await this.usersService.clearOtpOnly(user.id);
 
       const otp = this.generateOtp();
       const otpHash = await argon2.hash(otp);
