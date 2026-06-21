@@ -9,7 +9,16 @@ import { env } from './config/env';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const corsOrigin = env.CORS_ORIGINS;
+  const allowedOrigins = new Set(env.CORS_ORIGINS);
+  const corsOrigin = (
+    origin: string | undefined,
+    callback: (err: Error | null, allow?: boolean) => void,
+  ) => {
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.has(origin)) return callback(null, true);
+    return callback(null, false);
+  };
+
   app.enableCors({
     origin: corsOrigin,
     credentials: true,
