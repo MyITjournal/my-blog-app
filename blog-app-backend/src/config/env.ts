@@ -46,6 +46,10 @@ export const env = createEnv({
     RESEND_API_KEY: z.string().min(1),
     MAIL_FROM: z.string().min(1),
     CONTACT_EMAIL: z.string().min(1),
+
+    CLOUDINARY_CLOUD_NAME: z.string().min(1),
+    CLOUDINARY_API_KEY: z.string().min(1),
+    CLOUDINARY_API_SECRET: z.string().min(1),
   },
   runtimeEnv: process.env,
   emptyStringAsUndefined: true,
