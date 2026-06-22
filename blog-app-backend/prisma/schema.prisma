@@ -20,8 +20,8 @@ model User {
 id String @id @default(uuid())
 email String @unique
 password String
-fullName String? @map("full_name")
-username String? @unique
+firstName String? @map("first_name")
+lastName String? @map("last_name")
 bio String?
 photoUrl String? @map("photo_url")
 isPublished Boolean @default(false) @map("is_published")
