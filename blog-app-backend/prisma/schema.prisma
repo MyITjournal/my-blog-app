@@ -153,3 +153,11 @@ user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 @@index([userId])
 @@map("ResetPassword")
 }
+
+model NewsletterSubscriber {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("newsletter_subscribers")
+}
