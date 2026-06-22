@@ -13,7 +13,7 @@ import { CreateUserDto } from './dto/create-user.dto';
 import { PaginationDto } from './dto/pagination.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { AuthProvider, User } from './entities/user.entity';
+import { AuthProvider, User, UserRole } from './entities/user.entity';
 import { ResetPassword } from '../auth/entities/reset-password.entity';
 import { PostsService } from '../posts/posts.service';
 
@@ -224,7 +224,7 @@ export class UsersService {
         email: lowercasedEmail,
         password: passwordHash,
         authProvider: AuthProvider.EMAIL,
-        role: null,
+        role: UserRole.USER,
         firstName: dto.firstName,
         lastName: dto.lastName,
         otpHash: null,
@@ -288,7 +288,7 @@ export class UsersService {
         authProvider: AuthProvider.GOOGLE,
         isVerified: dto.isVerified,
         onboardingComplete: dto.onboardingComplete,
-        role: null,
+        role: UserRole.USER,
       },
     });
   }

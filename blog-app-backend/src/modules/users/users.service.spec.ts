@@ -10,7 +10,7 @@ import {
 import { UsersService, EMAIL_ALREADY_EXISTS } from './users.service';
 import { UserModelAction } from './actions/user.action';
 import { ResetPasswordModelAction } from './actions/reset-password.action';
-import { User, AuthProvider } from './entities/user.entity';
+import { User, AuthProvider, UserRole } from './entities/user.entity';
 import { PostsService } from '../posts/posts.service';
 
 jest.mock('argon2', () => ({
@@ -24,7 +24,7 @@ const baseUser = {
   lastName: 'User',
   authProvider: AuthProvider.EMAIL,
   isVerified: false,
-  role: null,
+  role: UserRole.USER,
   otpHash: null,
   otpExpiresAt: null,
 } as User;
@@ -78,7 +78,7 @@ describe('UsersService', () => {
           email: lowercasedEmail,
           password: 'mocked-password-hash',
           authProvider: AuthProvider.EMAIL,
-          role: null,
+          role: UserRole.USER,
           firstName: dto.firstName,
           lastName: dto.lastName,
           otpHash: null,

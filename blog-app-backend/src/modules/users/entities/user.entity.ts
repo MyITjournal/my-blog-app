@@ -43,8 +43,8 @@ export class User {
   @ApiProperty({ default: false })
   isPublished: boolean;
 
-  @ApiProperty({ enum: UserRole, nullable: true, default: null })
-  role: UserRole | null;
+  @ApiProperty({ enum: UserRole, default: UserRole.USER })
+  role: UserRole;
 
   @ApiProperty({ enum: AuthProvider, default: AuthProvider.EMAIL })
   authProvider: AuthProvider;
