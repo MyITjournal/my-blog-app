@@ -190,7 +190,7 @@ export class AuthService {
 
       return {
         status: 'pending_verification',
-        message: 'A verification code has been sent to your email address.',
+        message: 'Check your email for the verification code.',
       };
     }
 

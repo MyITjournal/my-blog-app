@@ -258,7 +258,7 @@ describe('AuthService', () => {
       expect(usersService.storeOtpHash).toHaveBeenCalled();
       expect(result).toEqual({
         status: 'pending_verification',
-        message: 'A verification code has been sent to your email address.',
+        message: 'Check your email for the verification code.',
       });
     });
 

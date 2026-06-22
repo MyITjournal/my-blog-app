@@ -164,7 +164,7 @@ export class TokenService {
       const accessToken = await this.generateAccessToken({
         id: user.id,
         email: user.email,
-        role: user.role as unknown as UserRole | null,
+        role: user.role as unknown as UserRole,
         onboardingComplete: user.onboardingComplete,
       });
 
