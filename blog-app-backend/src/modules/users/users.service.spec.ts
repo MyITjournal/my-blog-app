@@ -60,6 +60,8 @@ describe('UsersService', () => {
     const dto = {
       email: 'test@example.com',
       password: 'StrongPass1!',
+      firstName: 'Test',
+      lastName: 'User',
     };
 
     const lowercasedEmail = 'test@example.com';
@@ -77,6 +79,8 @@ describe('UsersService', () => {
           password: 'mocked-password-hash',
           authProvider: AuthProvider.EMAIL,
           role: null,
+          firstName: dto.firstName,
+          lastName: dto.lastName,
           otpHash: null,
           otpExpiresAt: null,
         },
@@ -100,73 +104,54 @@ describe('UsersService', () => {
       expect(action.update).not.toHaveBeenCalled();
     });
 
-    it('updates existing user when unverified and has a valid OTP (idempotent)', async () => {
+    it('throws PENDING_VERIFICATION when existing user is unverified (with valid OTP)', async () => {
       const futureDate = new Date(Date.now() + 60_000);
-      const unverifiedWithOTP = {
-        ...baseUser,
-        otpExpiresAt: futureDate,
-      };
+      const unverifiedWithOTP = { ...baseUser, otpExpiresAt: futureDate };
       action.findByEmail.mockResolvedValue(unverifiedWithOTP);
-      action.update.mockResolvedValue(unverifiedWithOTP);
 
-      const result = await service.createEmailUser(dto);
-
-      expect(action.update).toHaveBeenCalled();
-      expect(action.create).not.toHaveBeenCalled();
-    });
-
-    it('updates existing user when unverified and OTP has expired', async () => {
-      const pastDate = new Date(Date.now() - 60_000);
-      const unverifiedExpired = {
-        ...baseUser,
-        otpExpiresAt: pastDate,
-      };
-      action.findByEmail.mockResolvedValue(unverifiedExpired);
-      action.update.mockResolvedValue(unverifiedExpired);
-
-      const result = await service.createEmailUser(dto);
-
-      expect(action.findByEmail).toHaveBeenCalledWith(lowercasedEmail);
-      expect(action.update).toHaveBeenCalledWith({
-        identifierOptions: { id: unverifiedExpired.id },
-        updatePayload: {
-          password: 'mocked-password-hash',
-          otpHash: null,
-          otpExpiresAt: null,
-        },
-        transactionOptions: { useTransaction: false as const },
+      await expect(service.createEmailUser(dto)).rejects.toMatchObject({
+        response: { error: 'PENDING_VERIFICATION' },
       });
       expect(action.create).not.toHaveBeenCalled();
-      expect(result).toEqual(unverifiedExpired);
+      expect(action.update).not.toHaveBeenCalled();
     });
 
-    it('updates existing user when unverified and OTP was never set', async () => {
+    it('throws PENDING_VERIFICATION when existing user is unverified (expired OTP)', async () => {
+      const pastDate = new Date(Date.now() - 60_000);
+      const unverifiedExpired = { ...baseUser, otpExpiresAt: pastDate };
+      action.findByEmail.mockResolvedValue(unverifiedExpired);
+
+      await expect(service.createEmailUser(dto)).rejects.toMatchObject({
+        response: { error: 'PENDING_VERIFICATION' },
+      });
+      expect(action.create).not.toHaveBeenCalled();
+      expect(action.update).not.toHaveBeenCalled();
+    });
+
+    it('throws PENDING_VERIFICATION when existing user is unverified (no OTP set)', async () => {
       const unverifiedNoOtp = {
         ...baseUser,
         otpHash: null,
         otpExpiresAt: null,
       };
       action.findByEmail.mockResolvedValue(unverifiedNoOtp);
-      action.update.mockResolvedValue(unverifiedNoOtp);
 
-      const result = await service.createEmailUser(dto);
-
-      expect(action.update).toHaveBeenCalled();
+      await expect(service.createEmailUser(dto)).rejects.toMatchObject({
+        response: { error: 'PENDING_VERIFICATION' },
+      });
       expect(action.create).not.toHaveBeenCalled();
+      expect(action.update).not.toHaveBeenCalled();
     });
 
-    it('throws InternalServerErrorException when update returns null', async () => {
+    it('throws PENDING_VERIFICATION (not InternalServerErrorException) when unverified user exists', async () => {
       const pastDate = new Date(Date.now() - 60_000);
-      const unverifiedExpired = {
-        ...baseUser,
-        otpExpiresAt: pastDate,
-      };
+      const unverifiedExpired = { ...baseUser, otpExpiresAt: pastDate };
       action.findByEmail.mockResolvedValue(unverifiedExpired);
       action.update.mockResolvedValue(null);
 
-      await expect(service.createEmailUser(dto)).rejects.toThrow(
-        InternalServerErrorException,
-      );
+      await expect(service.createEmailUser(dto)).rejects.toMatchObject({
+        response: { error: 'PENDING_VERIFICATION' },
+      });
     });
   });
 });
