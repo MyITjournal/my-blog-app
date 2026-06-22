@@ -1,15 +1,20 @@
-/*
-  Warnings:
+-- AlterTable: add new columns
+ALTER TABLE "users"
+  ADD COLUMN "first_name" TEXT,
+  ADD COLUMN "last_name" TEXT;
 
-  - You are about to drop the column `full_name` on the `users` table. All the data in the column will be lost.
-  - You are about to drop the column `username` on the `users` table. All the data in the column will be lost.
+-- Migrate existing full_name data: first word → first_name, remainder → last_name
+UPDATE "users"
+SET
+  "first_name" = split_part("full_name", ' ', 1),
+  "last_name"  = NULLIF(trim(substr("full_name", strpos("full_name", ' ') + 1)), '')
+WHERE "full_name" IS NOT NULL;
 
-*/
 -- DropIndex
-DROP INDEX "users_username_key";
+DROP INDEX IF EXISTS "users_username_key";
 
--- AlterTable
-ALTER TABLE "users" DROP COLUMN "full_name",
-DROP COLUMN "username",
-ADD COLUMN     "first_name" TEXT,
-ADD COLUMN     "last_name" TEXT;
+-- AlterTable: drop old columns
+ALTER TABLE "users"
+  DROP COLUMN IF EXISTS "full_name",
+  DROP COLUMN IF EXISTS "username";
+
