@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule } from '@nestjs/throttler';
+import { RolesGuard } from './common/guards/roles.guard';
 import { AuthModule } from './modules/auth/auth.module';
 import { JwtAuthGuard } from './modules/auth/guards/jwt-auth.guard';
 import { UsersModule } from './modules/users/users.module';
@@ -12,6 +13,7 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
 import { SearchModule } from './modules/search/search.module';
+import { UploadsModule } from './modules/uploads/uploads.module';
 
 @Module({
   imports: [
@@ -29,6 +31,7 @@ import { SearchModule } from './modules/search/search.module';
     TagsModule,
     AuthModule,
     SearchModule,
+    UploadsModule,
   ],
   controllers: [AppController],
   providers: [
@@ -36,6 +39,10 @@ import { SearchModule } from './modules/search/search.module';
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })
