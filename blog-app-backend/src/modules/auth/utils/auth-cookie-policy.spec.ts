@@ -1,25 +1,34 @@
 import { resolveAuthCookieOptions } from './auth-cookie-policy';
 
 describe('resolveAuthCookieOptions', () => {
-  it('uses backend shared domain and strict SameSite in production', () => {
+  it('uses SameSite=none and Secure in production for cross-domain frontends', () => {
     expect(
-      resolveAuthCookieOptions('production', '.open-profile.hng14.com'),
-    ).toEqual({
-      secure: true,
-      sameSite: 'strict',
-      path: '/',
-      domain: '.open-profile.hng14.com',
-    });
-  });
-
-  it('uses shared domain and none SameSite in staging for cross-origin frontends', () => {
-    expect(
-      resolveAuthCookieOptions('staging', 'staging.open-profile.hng14.com'),
+      resolveAuthCookieOptions('production', ''),
     ).toEqual({
       secure: true,
       sameSite: 'none',
       path: '/',
-      domain: 'staging.open-profile.hng14.com',
+    });
+  });
+
+  it('includes domain in production when COOKIE_DOMAIN is set', () => {
+    expect(
+      resolveAuthCookieOptions('production', '.example.com'),
+    ).toEqual({
+      secure: true,
+      sameSite: 'none',
+      path: '/',
+      domain: '.example.com',
+    });
+  });
+
+  it('uses SameSite=none and Secure in staging', () => {
+    expect(
+      resolveAuthCookieOptions('staging', ''),
+    ).toEqual({
+      secure: true,
+      sameSite: 'none',
+      path: '/',
     });
   });
 

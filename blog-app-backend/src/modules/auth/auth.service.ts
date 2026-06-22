@@ -86,7 +86,7 @@ export class AuthService {
     try {
       await this.mailService.sendVerificationOtp(
         user.email,
-        user.fullName ?? '',
+        user.firstName ?? '',
         otp,
       );
     } catch (err) {
@@ -175,7 +175,7 @@ export class AuthService {
       try {
         await this.mailService.sendVerificationOtp(
           user.email,
-          user.fullName ?? '',
+          user.firstName ?? '',
           otp,
         );
       } catch (err) {
@@ -566,7 +566,8 @@ export class AuthService {
 
     const created = await this.usersService.createGoogleUser({
       email: googleUser.email,
-      fullName: googleUser.fullName,
+      firstName: googleUser.firstName,
+      lastName: googleUser.lastName,
       isVerified: true,
       onboardingComplete: false,
     });
@@ -695,7 +696,7 @@ export class AuthService {
     try {
       await this.mailService.sendVerificationOtp(
         user.email,
-        user.fullName ?? '',
+        user.firstName ?? '',
         otp,
       );
     } catch (error) {

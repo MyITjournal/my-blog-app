@@ -80,7 +80,51 @@ export class AuthController {
   @Public()
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Log in with email and password' })
+  @ApiOperation({
+    summary: 'Log in with email and password',
+    description:
+      'Authenticates a user with email and password. If the account is unverified, a new OTP is sent and a pending_verification response is returned instead of an error.',
+  })
+  @ApiResponse({
+    status: 200,
+    description:
+      'Either login succeeded (tokens issued) or the account is unverified (a new OTP has been sent). Check the "status" field to distinguish the two.',
+    schema: {
+      oneOf: [
+        {
+          example: {
+            status: 'success',
+            user: {
+              id: 'uuid',
+              email: 'user@example.com',
+              role: 'USER',
+              onboardingComplete: true,
+            },
+          },
+        },
+        {
+          example: {
+            status: 'pending_verification',
+            message: 'A verification code has been sent to your email address.',
+          },
+        },
+      ],
+    },
+  })
+  @ApiResponse({
+    status: 400,
+    description:
+      'Account was registered with a different provider (e.g. Google)',
+  })
+  @ApiResponse({
+    status: 401,
+    description: 'Invalid email or password',
+  })
+  @ApiResponse({
+    status: 429,
+    description:
+      'Too many failed attempts or requests — account or IP temporarily locked',
+  })
   async login(
     @Body() dto: LoginDto,
     @Req() req: Request,
