@@ -6,10 +6,11 @@ import {
 } from '@nestjs/common';
 import { Prisma, Post } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service.js';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { CreatePostDto } from './dto/create-post.dto.js';
-import { PostsQueryDto } from './dto/posts-query.dto.js';
-import { UpdatePostDto } from './dto/update-post.dto.js';
-import { PostEntity } from './entities/post.entity.js';
+import { PostsQueryDto } from './dto/posts-query.dto';
+import { UpdatePostDto } from './dto/update-post.dto';
+import { PostEntity } from './entities/post.entity';
 
 type PostWithRelations = Post & {
   category: { id: string; name: string; slug: string } | null;
@@ -39,7 +40,10 @@ const POST_INCLUDE = {
 
 @Injectable()
 export class PostsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cloudinary: CloudinaryService,
+  ) {}
 
   private toEntity(post: PostWithRelations): PostEntity {
     return {
@@ -49,6 +53,7 @@ export class PostsService {
       slug: post.slug,
       content: post.content,
       excerpt: post.excerpt,
+      coverImageUrl: post.coverImageUrl,
       isPublished: post.isPublished,
       publishedAt: post.publishedAt,
       createdAt: post.createdAt,
@@ -396,5 +401,39 @@ export class PostsService {
       where: { id },
       data: { deletedAt: new Date() },
     });
+  }
+
+  async uploadCoverImage(
+    authorId: string,
+    id: string,
+    buffer: Buffer,
+  ): Promise<PostEntity> {
+    const existing = await this.prisma.post.findFirst({
+      where: { id, deletedAt: null },
+    });
+
+    if (!existing) {
+      throw new NotFoundException(`Post ${id} not found`);
+    }
+
+    if (existing.authorId !== authorId) {
+      throw new ForbiddenException(
+        'You are not allowed to update this post',
+      );
+    }
+
+    const uploaded = await this.cloudinary.uploadImage(
+      buffer,
+      'blog/covers',
+      `post-${id}`,
+    );
+
+    const updated = await this.prisma.post.update({
+      where: { id },
+      data: { coverImageUrl: uploaded.secure_url },
+      include: POST_INCLUDE,
+    });
+
+    return this.toEntity(updated);
   }
 }

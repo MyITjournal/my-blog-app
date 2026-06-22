@@ -19,6 +19,9 @@ export class PostEntity {
   @ApiProperty({ nullable: true })
   excerpt: string | null;
 
+  @ApiProperty({ nullable: true })
+  coverImageUrl: string | null;
+
   @ApiProperty({ default: false })
   isPublished: boolean;
 
