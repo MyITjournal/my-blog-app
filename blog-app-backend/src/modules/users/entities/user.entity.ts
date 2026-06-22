@@ -21,11 +21,18 @@ export class User {
   @Exclude()
   password: string;
 
-  @ApiProperty({ nullable: true })
-  fullName: string | null;
+  @ApiProperty({ example: 'Jane', nullable: true })
+  firstName: string | null;
 
-  @ApiProperty({ example: 'john-doe', nullable: true })
-  username: string | null;
+  @ApiProperty({ example: 'Doe', nullable: true })
+  lastName: string | null;
+
+  @ApiProperty({
+    example: 'Jane Doe',
+    nullable: true,
+    description: 'Computed from firstName and lastName',
+  })
+  fullName: string | null;
 
   @ApiProperty({ nullable: true })
   bio: string | null;

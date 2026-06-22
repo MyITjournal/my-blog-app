@@ -87,24 +87,14 @@ export class UsersService {
   }
 
   async updateMyProfile(userId: string, dto: UpdateProfileDto): Promise<User> {
-    await this.findOne(userId);
+    const user = await this.findOne(userId);
 
     const payload: Partial<User> = {};
 
-    if (dto.fullName !== undefined) payload.fullName = dto.fullName;
+    if (dto.firstName !== undefined) payload.firstName = dto.firstName;
+    if (dto.lastName !== undefined) payload.lastName = dto.lastName;
     if (dto.bio !== undefined) payload.bio = dto.bio;
     if (dto.photoUrl !== undefined) payload.photoUrl = dto.photoUrl;
-
-    if (dto.username !== undefined) {
-      const username = dto.username?.trim() || null;
-      if (username) {
-        const existing = await this.findByUsername(username);
-        if (existing && existing.id !== userId) {
-          throw new ConflictException('Username already in use');
-        }
-      }
-      payload.username = username;
-    }
 
     const updated = await this.userModelAction.update({
       ...NO_TRANSACTION,
@@ -211,7 +201,6 @@ export class UsersService {
   }): Promise<User> {
     const lowercasedEmail = dto.email.toLowerCase();
     const existing = await this.userModelAction.findByEmail(lowercasedEmail);
-    const fullName = `${dto.firstName} ${dto.lastName}`.trim();
     if (existing) {
       if (existing.isVerified) {
         throw new ConflictException({
@@ -236,7 +225,8 @@ export class UsersService {
         password: passwordHash,
         authProvider: AuthProvider.EMAIL,
         role: null,
-        fullName,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
         otpHash: null,
         otpExpiresAt: null,
       },
@@ -281,7 +271,8 @@ export class UsersService {
 
   async createGoogleUser(dto: {
     email: string;
-    fullName: string;
+    firstName: string;
+    lastName: string;
     isVerified: boolean;
     onboardingComplete: boolean;
   }): Promise<User> {
@@ -292,7 +283,8 @@ export class UsersService {
       createPayload: {
         email: dto.email,
         password: passwordHash,
-        fullName: dto.fullName,
+        firstName: dto.firstName,
+        lastName: dto.lastName,
         authProvider: AuthProvider.GOOGLE,
         isVerified: dto.isVerified,
         onboardingComplete: dto.onboardingComplete,
@@ -315,10 +307,6 @@ export class UsersService {
 
   async invalidateAllByUserId(userId: string): Promise<void> {
     await this.resetPasswordAction.invalidateAllByUserId(userId);
-  }
-
-  async findByUsername(username: string): Promise<User | null> {
-    return await this.userModelAction.findByUsername(username);
   }
 
   async getAuthorProfile(id: string): Promise<User> {

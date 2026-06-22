@@ -8,20 +8,23 @@ export class UserModelAction {
   constructor(private readonly prisma: PrismaService) {}
 
   private toDomain(user: PrismaUser | null): User | null {
-    return user as unknown as User | null;
+    if (!user) return null;
+    const domain = user as unknown as User;
+    domain.fullName =
+      [domain.firstName, domain.lastName].filter(Boolean).join(' ') || null;
+    return domain;
   }
 
   private whereUnique(
-    identifier: Partial<Pick<User, 'id' | 'email' | 'username'>>,
+    identifier: Partial<Pick<User, 'id' | 'email'>>,
   ): Prisma.UserWhereUniqueInput {
     if (identifier.id) return { id: identifier.id };
     if (identifier.email) return { email: identifier.email };
-    if (identifier.username) return { username: identifier.username };
     throw new Error('No valid unique identifier provided for user lookup');
   }
 
   async get(options: {
-    identifierOptions: Partial<Pick<User, 'id' | 'email' | 'username'>>;
+    identifierOptions: Partial<Pick<User, 'id' | 'email'>>;
   }): Promise<User | null> {
     const user = await this.prisma.user.findUnique({
       where: this.whereUnique(options.identifierOptions),
@@ -42,7 +45,7 @@ export class UserModelAction {
 
   async update(options: {
     transactionOptions?: unknown;
-    identifierOptions: Partial<Pick<User, 'id' | 'email' | 'username'>>;
+    identifierOptions: Partial<Pick<User, 'id' | 'email'>>;
     updatePayload: Partial<User>;
   }): Promise<User | null> {
     await this.prisma.user.update({
@@ -54,7 +57,7 @@ export class UserModelAction {
 
   async delete(options: {
     transactionOptions?: unknown;
-    identifierOptions: Partial<Pick<User, 'id' | 'email' | 'username'>>;
+    identifierOptions: Partial<Pick<User, 'id' | 'email'>>;
   }): Promise<void> {
     await this.prisma.user.update({
       where: this.whereUnique(options.identifierOptions),
@@ -105,9 +108,5 @@ export class UserModelAction {
 
   findByEmail(email: string): Promise<User | null> {
     return this.get({ identifierOptions: { email } });
-  }
-
-  async findByUsername(username: string): Promise<User | null> {
-    return this.get({ identifierOptions: { username } });
   }
 }

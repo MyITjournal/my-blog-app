@@ -1,24 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUrl, Matches, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUrl, MaxLength } from 'class-validator';
 
 export class UpdateProfileDto {
-  @ApiProperty({ required: false, nullable: true, maxLength: 120 })
-  @IsOptional()
-  @IsString()
-  @MaxLength(120)
-  fullName?: string | null;
-
-  @ApiProperty({
-    required: false,
-    nullable: true,
-    maxLength: 50,
-    description: 'Lowercase letters, numbers, underscore and hyphen only',
-  })
+  @ApiProperty({ required: false, nullable: true, maxLength: 50 })
   @IsOptional()
   @IsString()
   @MaxLength(50)
-  @Matches(/^[a-z0-9_-]+$/)
-  username?: string | null;
+  firstName?: string | null;
+
+  @ApiProperty({ required: false, nullable: true, maxLength: 50 })
+  @IsOptional()
+  @IsString()
+  @MaxLength(50)
+  lastName?: string | null;
 
   @ApiProperty({ required: false, nullable: true, maxLength: 280 })
   @IsOptional()
