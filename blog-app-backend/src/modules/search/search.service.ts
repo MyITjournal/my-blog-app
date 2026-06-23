@@ -50,6 +50,7 @@ export class SearchService {
           title: true,
           slug: true,
           excerpt: true,
+          coverImageUrl: true,
           createdAt: true,
           updatedAt: true,
           author: {

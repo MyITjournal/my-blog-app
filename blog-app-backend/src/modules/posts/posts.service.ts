@@ -88,7 +88,9 @@ export class PostsService {
     const existing = await this.prisma.post.findFirst({
       where: {
         slug: base,
-        ...(options?.excludePostId ? { id: { not: options.excludePostId } } : {}),
+        ...(options?.excludePostId
+          ? { id: { not: options.excludePostId } }
+          : {}),
       },
     });
     if (!existing) return base;
@@ -417,9 +419,7 @@ export class PostsService {
     }
 
     if (existing.authorId !== authorId) {
-      throw new ForbiddenException(
-        'You are not allowed to update this post',
-      );
+      throw new ForbiddenException('You are not allowed to update this post');
     }
 
     const uploaded = await this.cloudinary.uploadImage(
