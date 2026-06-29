@@ -61,7 +61,16 @@ async function bootstrap() {
   const logger = new Logger('Bootstrap');
   logger.log(`Application running on http://localhost:${env.PORT}`);
   if (env.SWAGGER_ENABLED) {
-    logger.log(`Swagger docs at http://localhost:${env.PORT}/docs`);
+    logger.log(
+      `
+      ------------
+      Internal Application Started!
+      Environment: ${env}
+      API: http://localhost:${env.PORT}/
+      API Docs: http://localhost:${env.PORT}/docs
+      ------------
+  `,
+    );
   }
 }
 bootstrap();

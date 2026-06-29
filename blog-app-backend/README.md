@@ -1,26 +1,56 @@
-# Blog App — Backend
+# ScribePoint API
 
-A RESTful blog API built with **NestJS 11**, **Prisma 6**, and **PostgreSQL** (development). Supports full authentication, posts with tags and categories, comments, and public author profiles.
+A full-featured blog platform REST API built with **NestJS**, **Prisma**, and **PostgreSQL**. Supports email/password and Google OAuth authentication, role-based access control, image uploads via Cloudinary, full-text search, newsletter subscriptions, and automated transactional emails.
 
 ---
 
 ## Tech Stack
 
-| Layer          | Technology                          |
-| -------------- | ----------------------------------- |
-| Framework      | NestJS 11                           |
-| ORM            | Prisma 6                            |
-| Database       | PostgreSQL (dev)                    |
-| Auth           | JWT + httpOnly refresh token cookie |
-| OAuth          | Google OAuth 2.0                    |
-| Validation     | class-validator + class-transformer |
-| Env Validation | @t3-oss/env-core + zod              |
-| Rate Limiting  | @nestjs/throttler                   |
-| API Docs       | Swagger (`/docs`)                   |
+| Layer            | Technology                                           |
+| ---------------- | ---------------------------------------------------- |
+| Framework        | NestJS 11                                            |
+| Language         | TypeScript                                           |
+| ORM              | Prisma 7                                             |
+| Database         | PostgreSQL                                           |
+| Auth             | JWT (access + refresh tokens), Passport              |
+| OAuth            | Google OAuth 2.0 (passport-google-oauth20)           |
+| Password hashing | Argon2                                               |
+| Email            | Resend                                               |
+| Image storage    | Cloudinary                                           |
+| In-memory store  | Custom in-memory store (brute-force & rate-limiting) |
+| Rate limiting    | @nestjs/throttler                                    |
+| Validation       | class-validator, class-transformer, Zod              |
+| Env validation   | @t3-oss/env-core + Zod                               |
+| Job scheduling   | @nestjs/schedule                                     |
+| API Docs         | Swagger / OpenAPI (`/docs`)                          |
+
+---
+
+## Features
+
+- **Auth** — register, email OTP verification, login, logout, Google OAuth, forgot/reset password, access + refresh token rotation
+- **Posts** — create/update/delete/publish draft posts, list published posts, slug-based public access, cover image upload, categories, and tags
+- **Comments** — comments on published posts; authors and post owners can delete their own
+- **Categories & Tags** — managed independently, associated with posts via many-to-many
+- **Search** — full-text search across title, slug, excerpt, and content; filterable by category or tag; paginated
+- **Uploads** — authenticated image uploads to Cloudinary (`content`, `avatar`, or `general` contexts); 5 MB limit; JPEG/PNG/WebP/AVIF/GIF supported
+- **Newsletter** — public email subscription with duplicate prevention
+- **Role-based access control** — `admin` and `user` roles enforced via guards and decorators
+- **Soft deletes** — users, posts, and comments use `deletedAt` instead of hard deletes
+- **Global validation pipe** — whitelist mode, forbids unknown properties
+- **CORS** — configurable allowed origins via environment variable
 
 ---
 
 ## Getting Started
+
+### Prerequisites
+
+- Node.js >= 20
+- PostgreSQL database
+- A [Cloudinary](https://cloudinary.com) account
+- A [Resend](https://resend.com) account
+- A Google OAuth 2.0 app ([console.cloud.google.com](https://console.cloud.google.com))
 
 ### 1. Install dependencies
 
@@ -28,60 +58,21 @@ A RESTful blog API built with **NestJS 11**, **Prisma 6**, and **PostgreSQL** (d
 npm install
 ```
 
-### 2. Generate Prisma client
+### 2. Set environment variables
 
-```bash
-npx prisma generate
-```
-
-### 3. Push schema to database
-
-```bash
-npx prisma db push
-```
-
-### 4. Set environment variables
-
-Copy `.env.example` to `.env` and fill in the values:
+Copy `.env.example` to `.env` and fill in the values.
 
 ```bash
 cp .env.example .env
 ```
 
-Required variables:
+### 3. Run database migrations
 
-```env
-# App
-NODE_ENV=development
-PORT=3000
-FRONTEND_URL=http://localhost:5173
-
-# Database
-DATABASE_URL="postgresql://username:password@localhost:5432/database_name"
-
-# JWT — secrets must be at least 32 characters
-JWT_ACCESS_SECRET=your-access-secret-min-32-chars
-JWT_ACCESS_EXPIRES_IN=15m
-JWT_REFRESH_SECRET=your-refresh-secret-min-32-chars
-JWT_REFRESH_EXPIRES_IN=7d
-JWT_RESET_SECRET=your-reset-secret-min-32-chars
-
-# Google OAuth
-# Create credentials at https://console.cloud.google.com/apis/credentials
-CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-CLIENT_SECRET=your-google-client-secret
-GOOGLE_CALLBACK_URL=http://localhost:3000/auth/google/callback
-
-# Cookies — leave empty in development
-COOKIE_DOMAIN=
-
-# Swagger
-SWAGGER_ENABLED=true
+```bash
+npx prisma migrate deploy
 ```
 
-> **Note:** Environment variables are validated on startup with `zod`. The app will refuse to start if any required variable is missing or invalid (e.g. JWT secrets shorter than 32 characters).
-
-### 5. Run in development
+### 4. Run in development
 
 ```bash
 npm run start:dev
@@ -125,64 +116,86 @@ npm run lint
 ```
 src/
 ├── common/
-│   ├── decorators/        # @CurrentUser, @Public
-│   └── redis/             # In-memory Redis-compatible service
+│   ├── decorators/        # @CurrentUser, @Public, @Roles
+│   ├── guards/            # RolesGuard
+│   └── redis/             # Redis module and service
 ├── config/
-│   └── env.ts             # Typed + validated environment config (zod)
+│   └── env.ts             # Zod-validated environment config
 ├── modules/
-│   ├── auth/              # Registration, login, JWT, OTP, Google OAuth
+│   ├── auth/              # Registration, login, JWT, OTP, Google OAuth, password reset
 │   ├── categories/        # Post categories (CRUD)
-│   ├── comments/          # Post comments (nested under posts)
-│   ├── mail/              # Email sending service (stub in development)
+│   ├── cloudinary/        # Cloudinary client wrapper
+│   ├── comments/          # Post comments (nested under /posts/:postId/comments)
+│   ├── mail/              # Transactional email via Resend
+│   ├── newsletter/        # Newsletter subscriptions
 │   ├── posts/             # Blog posts with publish/unpublish workflow
 │   ├── queue/             # Background job queue
-│   ├── rate-limiter/      # Custom rate limiter
+│   ├── rate-limiter/      # Rate limiting helpers
+│   ├── search/            # Full-text post search
 │   ├── tags/              # Post tags (CRUD)
-│   └── users/             # User management and author profiles
+│   ├── uploads/           # Image upload to Cloudinary
+│   └── users/             # User profile management
 └── prisma/
     ├── prisma.module.ts
     └── prisma.service.ts
 prisma/
 ├── schema.prisma          # Data models
-└── seed.ts                # Local demo data (not committed)
+└── migrations/            # Migration history
 ```
 
 ---
 
 ## API Overview
 
-Full interactive documentation is available at **`http://localhost:3000/docs`** (Swagger UI) when the server is running.
+Full interactive documentation is available at **`http://localhost:3000/docs`** when the server is running.
 
-### Module summary
+| Module     | Base path                 | Public endpoints                                                             | Requires auth                    |
+| ---------- | ------------------------- | ---------------------------------------------------------------------------- | -------------------------------- |
+| Auth       | `/auth`                   | register, verify-otp, resend-otp, login, forgot/reset password, Google OAuth | refresh, logout                  |
+| Posts      | `/posts`                  | list published, get by slug                                                  | create, update, delete, my posts |
+| Comments   | `/posts/:postId/comments` | list comments                                                                | create, delete                   |
+| Categories | `/categories`             | list                                                                         | create, update, delete           |
+| Tags       | `/tags`                   | list                                                                         | create, update, delete           |
+| Search     | `/search`                 | search posts, list categories, list tags                                     | —                                |
+| Uploads    | `/uploads`                | —                                                                            | upload image                     |
+| Newsletter | `/newsletter`             | subscribe                                                                    | —                                |
+| Users      | `/users`                  | —                                                                            | get/update own profile           |
 
-| Module     | Base Path                 | Public Endpoints                         | Auth Required                     |
-| ---------- | ------------------------- | ---------------------------------------- | --------------------------------- |
-| Auth       | `/auth`                   | register, login, OTP flows, Google OAuth | refresh, logout, me               |
-| Posts      | `/posts`                  | list published, get by slug              | create, update, publish, my posts |
-| Comments   | `/posts/:postId/comments` | list comments                            | create, delete                    |
-| Categories | `/categories`             | list                                     | create                            |
-| Tags       | `/tags`                   | list                                     | create                            |
-| Users      | `/users`                  | author profile, author posts             | update own profile, admin ops     |
+### Authentication flow
 
-### Authentication
-
-- Login returns an `accessToken` (use in `Authorization: Bearer <token>` header).
-- A `refreshToken` is set as an **httpOnly cookie** automatically.
-- Call `POST /auth/refresh-token` when the access token expires — the cookie is sent automatically by the browser.
+1. `POST /auth/register` — creates account and sends OTP to email
+2. `POST /auth/verify-otp` — verifies OTP, account becomes active
+3. `POST /auth/login` — returns `accessToken`; sets `refreshToken` as an **httpOnly cookie**
+4. Include `Authorization: Bearer <accessToken>` on protected requests
+5. `POST /auth/refresh` — issues a new token pair when the access token expires (cookie sent automatically)
 
 ---
 
-## Database
+## Data Model
 
-Prisma schema is in `prisma/schema.prisma`. Key models:
+```
+User ─< Post ─< Comment
+         │
+         ├── Category
+         └─< PostTag >─ Tag
 
-- **User** — email/password or Google auth, OTP verification, soft-delete
-- **Post** — title, slug, content, excerpt, publish status, soft-delete
-- **Category** — optional post category
-- **Tag / PostTag** — many-to-many post tagging
-- **Comment** — nested under posts, soft-delete
-- **RefreshToken** — hashed token storage
-- **ResetPassword** — password reset token lifecycle
+User ─< RefreshToken
+User ─< ResetPassword
+NewsletterSubscriber
+```
+
+| Model                    | Notes                                                                                |
+| ------------------------ | ------------------------------------------------------------------------------------ |
+| **User**                 | Email/password or Google auth; OTP verification; `admin` \| `user` role; soft-delete |
+| **Post**                 | Title, slug, content, excerpt, cover image, publish status; soft-delete              |
+| **Category**             | Optional post grouping                                                               |
+| **Tag / PostTag**        | Many-to-many post tagging                                                            |
+| **Comment**              | Nested under posts; soft-delete                                                      |
+| **RefreshToken**         | Hashed token storage                                                                 |
+| **ResetPassword**        | Password reset token lifecycle                                                       |
+| **NewsletterSubscriber** | Email-only subscriber list                                                           |
+
+---
 
 ## Deployment
 
@@ -190,6 +203,9 @@ The API is live at **[https://scribepoint.onrender.com](https://scribepoint.onre
 
 Swagger documentation is available at [https://scribepoint.onrender.com/docs](https://scribepoint.onrender.com/docs).
 
-## License
+## Contributors
 
-[MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+Built collaboratively by:
+
+- **Adeyoola Adebayo** — Backend · [GitHub](https://github.com/MyITjournal)
+- **Adewumi Josephine Adedoyinsola** — Frontend · (https://josseycodes-portfolio.vercel.app/)
