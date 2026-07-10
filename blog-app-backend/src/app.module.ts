@@ -15,6 +15,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { SearchModule } from './modules/search/search.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { NewsletterModule } from './modules/newsletter/newsletter.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { NewsletterModule } from './modules/newsletter/newsletter.module';
     SearchModule,
     UploadsModule,
     NewsletterModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [
