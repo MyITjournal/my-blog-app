@@ -36,6 +36,7 @@ A full-featured blog platform REST API built with **NestJS**, **Prisma**, and **
 - **Uploads** — authenticated image uploads to Cloudinary (`content`, `avatar`, or `general` contexts); 5 MB limit; JPEG/PNG/WebP/AVIF/GIF supported
 - **Newsletter** — public email subscription with duplicate prevention
 - **Role-based access control** — `admin` and `user` roles enforced via guards and decorators
+- **Dashboard** — admin-only aggregate stats: site overview, post counts per category (including uncategorized), recent posts, recent users, and 7-day growth (new users/posts/comments); overview and posts-per-category responses are cached for 60s
 - **Soft deletes** — users, posts, and comments use `deletedAt` instead of hard deletes
 - **Global validation pipe** — whitelist mode, forbids unknown properties
 - **CORS** — configurable allowed origins via environment variable
@@ -107,7 +108,12 @@ npm run test:cov
 
 # Lint
 npm run lint
+
+# Seed database (see note below)
+npm run prisma:seed
 ```
+
+> **Note:** `prisma:seed` is defined in `package.json` but `prisma/seed.ts` does not exist yet in this repo. Until it's added, promote a user to `admin` manually (e.g. via a direct database update) — there is currently no CLI/seed path for creating the first admin account.
 
 ---
 
@@ -118,7 +124,7 @@ src/
 ├── common/
 │   ├── decorators/        # @CurrentUser, @Public, @Roles
 │   ├── guards/            # RolesGuard
-│   └── redis/             # Redis module and service
+│   └── redis/             # In-memory key/value store (not real Redis) used for brute-force & rate-limiting state
 ├── config/
 │   └── env.ts             # Zod-validated environment config
 ├── modules/
@@ -126,6 +132,7 @@ src/
 │   ├── categories/        # Post categories (CRUD)
 │   ├── cloudinary/        # Cloudinary client wrapper
 │   ├── comments/          # Post comments (nested under /posts/:postId/comments)
+│   ├── dashboard/         # Admin-only aggregate stats and site overview
 │   ├── mail/              # Transactional email via Resend
 │   ├── newsletter/        # Newsletter subscriptions
 │   ├── posts/             # Blog posts with publish/unpublish workflow
@@ -160,6 +167,7 @@ Full interactive documentation is available at **`http://localhost:3000/docs`** 
 | Uploads    | `/uploads`                | —                                                                            | upload image                     |
 | Newsletter | `/newsletter`             | subscribe                                                                    | —                                |
 | Users      | `/users`                  | —                                                                            | get/update own profile           |
+| Dashboard  | `/dashboard`              | —                                                                            | overview, posts-per-category, recent posts, recent users, growth (admin only) |
 
 ### Authentication flow
 

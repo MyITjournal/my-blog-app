@@ -35,4 +35,12 @@ export class DashboardController {
   getRecentUsers(@Query() query: RecentLimitDto) {
     return this.dashboardService.getRecentUsers(query.limit);
   }
+
+  @Get('growth')
+  @ApiOperation({
+    summary: 'Get new users/posts/comments in the last 7 days (admin only)',
+  })
+  getGrowth() {
+    return this.dashboardService.getGrowth();
+  }
 }
